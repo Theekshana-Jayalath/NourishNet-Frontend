@@ -8,7 +8,7 @@ const Header = () => {
 		style={{ backgroundImage: "url('/home.jpg')" }} id='header'>
 
 			{/* Gradient overlay */}
-			<div className="absolute inset-0 bg-linear-to-l from-black/80 via-black/50 to-transparent pointer-events-none z-0"></div>
+			<div className="absolute inset-0 bg-linear-to-l from-black/90 via-black/60 to-transparent pointer-events-none z-0"></div>
 
 			{/* Navbar */}
 			<Navbar/>
