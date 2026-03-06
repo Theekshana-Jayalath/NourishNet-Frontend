@@ -1,15 +1,13 @@
-import { useState } from 'react'
-import './App.css'
+import React from 'react'
+import Header from './components/Header'
 
-function App() {
-  const [count, setCount] = useState(0)
+const App = () => {
 
   return (
-    <div className='text-cyan-400 text-5xl'>
-      Hello world!<br />
-      Tailwind CSS is working!
+    <div className='w-full overflow-hidden'>
+      <Header />
     </div>
   )
 }
 
-export default App
+export default App;
