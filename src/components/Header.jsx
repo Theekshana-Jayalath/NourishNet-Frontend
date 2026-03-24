@@ -1,7 +1,10 @@
 import React from 'react'
 import Navbar from './Navbar';
+import { useNavigate } from 'react-router-dom'
 
 const Header = () => {
+	const navigate = useNavigate()
+	const goApply = () => { console.log('[Header] Join With Us clicked'); navigate('/apply') }
 	return (
 		<div className='relative min-h-screen mb-4 bg-cover bg-center flex
 		items-center w-full overflow-hidden'
@@ -23,8 +26,8 @@ const Header = () => {
 						NourishNet connects donors, NGOs, and communities to fight food insecurity. Donate surplus food and help create a hunger-free future.
 					</p>
 					<div className="mt-6">
-						<button className="px-6 py-3 bg-teal-500 hover:bg-teal-600 rounded-full text-black font-semibold transition-colors">
-							Join the Movement
+						<button onClick={goApply} className="inline-block px-6 py-3 bg-[#66ada4] hover:bg-[#5aa798] rounded-full text-black font-semibold transition-colors">
+							Join With Us
 						</button>
 					</div>
 				</div>

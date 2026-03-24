@@ -1,5 +1,6 @@
 import React from 'react';
 import { Logo } from '../assets/assets';
+import { Link } from 'react-router-dom'
 
 const Navbar = () => {
   return (
@@ -20,11 +21,13 @@ const Navbar = () => {
             </ul>
 
             {/* Sign In Button - Right */}
-            <div>
-                <button className='bg-teal-500 hover:bg-teal-600 text-black font-semibold px-5 py-2 rounded-full transition-colors'>
-                    Sign In
-                </button>
-            </div>
+                        <div>
+                                <Link to='/login' className='inline-block'>
+                                    <button className='bg-[#96ded1] hover:bg-[#66ada4] text-[#002a29] font-semibold px-5 py-2 rounded-full transition-colors'>
+                                            Sign In
+                                    </button>
+                                </Link>
+                        </div>
         </div>
     </div>
   );
