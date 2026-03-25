@@ -1,114 +1,74 @@
-import React, { useState } from "react";
-import Navbar from "./components/Navbar";
-import Request from "./components/Request";
-import RequestDashboard from "./components/RequestDashboard";
-import RequestHistory from "./components/RequestHistory";
-import RequestProfile from "./components/RequestProfile";
-import "./App.css";
+import React from 'react'
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
+import Header from './components/Header'
+import Footer from './components/Footer'
+import Apply from './pages/Apply'
+import Login from './pages/Login'
+import AdminDashboard from './pages/AdminDashboard'
+import Managers from './pages/admin/Managers'
+import Users from './pages/admin/Users'
+import Applications from './pages/admin/Applications'
+import DashboardHome from './pages/admin/DashboardHome'
+import ManagerDashboard from './pages/ManagerDashboard'
+import DonorDashboard from './pages/DonorDashboard'
+import NgoDashboard from './pages/NgoDashboard'
+import DriverDashboard from './pages/DriverDashboard'
 
 const App = () => {
-  const [activeTab, setActiveTab] = useState("request");
-  const [toasts, setToasts] = useState([]);
+  return (
+    <BrowserRouter>
+      <Main />
+    </BrowserRouter>
+  )
+}
 
-  const showToast = (message, type = "success") => {
-    const id = Date.now() + Math.random();
+function Main() {
+  const location = useLocation()
 
-    setToasts((prev) => [...prev, { id, message, type }]);
+  const hideFooterPaths = [
+    '/manager-dashboard',
+    '/donor-dashboard',
+    '/ngo-dashboard',
+    '/driver-dashboard',
+    '/ngo-manager-dashboard',
+    '/donor-manager-dashboard',
+    '/driver-manager-dashboard',
+  ]
 
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((toast) => toast.id !== id));
-    }, 3000);
-  };
-
-  const renderPage = () => {
-    switch (activeTab) {
-      case "dashboard":
-        return <RequestDashboard showToast={showToast} />;
-      case "history":
-        return <RequestHistory showToast={showToast} />;
-      case "profile":
-        return <RequestProfile showToast={showToast} />;
-      case "request":
-      default:
-        return <Request showToast={showToast} setActiveTab={setActiveTab} />;
-    }
-  };
+  const shouldHideFooter = hideFooterPaths.some((p) =>
+    location.pathname.startsWith(p)
+  )
 
   return (
-    <div className="w-full overflow-hidden bg-slate-100 min-h-screen">
-      <Navbar />
+    <>
+      <Routes>
+        <Route path="/" element={<Header />} />
+        <Route path="/apply" element={<Apply />} />
+        <Route path="/login" element={<Login />} />
 
-      <section className="max-w-7xl mx-auto px-4 md:px-6 py-10">
-        <div className="rounded-3xl bg-white shadow-xl p-4 md:p-6 mb-6">
-          <div className="mb-4">
-            <p className="text-emerald-600 font-semibold text-sm uppercase tracking-wider">
-              NGO Request Portal
-            </p>
-            <h2 className="text-2xl md:text-3xl font-bold text-slate-800 mt-1">
-              Manage Requests
-            </h2>
-            <p className="text-slate-500 mt-2">
-              Create requests, view request history, check dashboard insights,
-              and manage your NGO profile.
-            </p>
-          </div>
+        <Route path="/admin-dashboard/*" element={<AdminDashboard />}>
+          <Route index element={<DashboardHome />} />
+          <Route path="managers" element={<Managers />} />
+          <Route path="users" element={<Users />} />
+          <Route
+            path="inventory"
+            element={<div className="p-6">Inventory management coming soon.</div>}
+          />
+          <Route path="applications" element={<Applications />} />
+        </Route>
 
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={() => setActiveTab("dashboard")}
-              className={`tab-btn ${
-                activeTab === "dashboard" ? "tab-btn-active" : "tab-btn-idle"
-              }`}
-            >
-              Request Dashboard
-            </button>
+        <Route path="/manager-dashboard" element={<ManagerDashboard />} />
+        <Route path="/donor-dashboard" element={<DonorDashboard />} />
+        <Route path="/ngo-dashboard" element={<NgoDashboard />} />
+        <Route path="/driver-dashboard" element={<DriverDashboard />} />
 
-            <button
-              onClick={() => setActiveTab("request")}
-              className={`tab-btn ${
-                activeTab === "request" ? "tab-btn-active" : "tab-btn-idle"
-              }`}
-            >
-              New Request
-            </button>
+        <Route path="/ngo-manager-dashboard" element={<NgoDashboard />} />
+        <Route path="/driver-manager-dashboard" element={<DriverDashboard />} />
+      </Routes>
 
-            <button
-              onClick={() => setActiveTab("history")}
-              className={`tab-btn ${
-                activeTab === "history" ? "tab-btn-active" : "tab-btn-idle"
-              }`}
-            >
-              Request History
-            </button>
+      {!shouldHideFooter && <Footer />}
+    </>
+  )
+}
 
-            <button
-              onClick={() => setActiveTab("profile")}
-              className={`tab-btn ${
-                activeTab === "profile" ? "tab-btn-active" : "tab-btn-idle"
-              }`}
-            >
-              Request Profile
-            </button>
-          </div>
-        </div>
-
-        {renderPage()}
-      </section>
-
-      <div className="fixed top-5 right-5 z-50 space-y-3">
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            className={`min-w-[280px] max-w-sm rounded-xl px-4 py-3 text-white shadow-xl animate-slideIn ${
-              toast.type === "error" ? "bg-red-500" : "bg-emerald-600"
-            }`}
-          >
-            <div className="font-semibold">{toast.message}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-export default App;
+export default App
