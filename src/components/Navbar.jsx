@@ -14,10 +14,10 @@ const Navbar = () => {
 
             {/* Nav Links - Center */}
             <ul className='hidden md:flex items-center gap-2 text-white font-medium absolute left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-6 py-2'>
-                <li><a href='#' className='cursor-pointer px-3 py-1 rounded-full hover:bg-white/20 hover:text-teal-300 transition-all'>Home</a></li>
-                <li><a href='#' className='cursor-pointer px-3 py-1 rounded-full hover:bg-white/20 hover:text-teal-300 transition-all'>About</a></li>
-                <li><a href='#' className='cursor-pointer px-3 py-1 rounded-full hover:bg-white/20 hover:text-teal-300 transition-all'>Services</a></li>
-                <li><a href='#' className='cursor-pointer px-3 py-1 rounded-full hover:bg-white/20 hover:text-teal-300 transition-all'>Contact</a></li>
+                <li><a href='/' className='cursor-pointer px-3 py-1 rounded-full hover:bg-white/20 hover:text-teal-300 transition-all'>Home</a></li>
+                <li><a href='#about' className='cursor-pointer px-3 py-1 rounded-full hover:bg-white/20 hover:text-teal-300 transition-all'>About</a></li>
+                <li><a href='#services' className='cursor-pointer px-3 py-1 rounded-full hover:bg-white/20 hover:text-teal-300 transition-all'>Services</a></li>
+                <li><a href='#contact' className='cursor-pointer px-3 py-1 rounded-full hover:bg-white/20 hover:text-teal-300 transition-all'>Contact</a></li>
             </ul>
 
             {/* Sign In Button - Right */}

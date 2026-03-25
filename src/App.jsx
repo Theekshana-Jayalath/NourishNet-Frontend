@@ -1,6 +1,7 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Header from './components/Header'
+import Footer from './components/Footer'
 import Apply from './pages/Apply'
 import Login from './pages/Login'
 import AdminDashboard from './pages/AdminDashboard'
@@ -32,6 +33,7 @@ const App = () => {
         <Route path='/ngo-dashboard' element={<NgoDashboard />} />
         <Route path='/driver-dashboard' element={<DriverDashboard />} />
       </Routes>
+  <Footer />
     </BrowserRouter>
   )
 }
