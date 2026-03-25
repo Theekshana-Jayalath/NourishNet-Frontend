@@ -67,24 +67,32 @@ const Login = () => {
       const finalRole = serverRole || fallbackTokenRole || role
 
       // redirect based on server-provided role
-      switch (finalRole) {
-        case 'admin':
-          navigate('/admin-dashboard')
-          break
-        case 'manager':
-          navigate('/manager-dashboard')
-          break
-        case 'donor':
-          navigate('/donor-dashboard')
-          break
-        case 'ngo':
-          navigate('/ngo-dashboard')
-          break
-        case 'driver':
-          navigate('/driver-dashboard')
-          break
-        default:
-          navigate('/')
+      if (finalRole === 'admin') {
+        navigate('/admin-dashboard')
+      } else if (finalRole === 'manager') {
+        // server may return department for manager accounts
+        const dept = (data.department || '').toString().toLowerCase()
+        switch (dept) {
+          case 'ngo':
+            navigate('/ngo-manager-dashboard')
+            break
+          case 'donor':
+            navigate('/donor-manager-dashboard')
+            break
+          case 'driver':
+            navigate('/driver-manager-dashboard')
+            break
+          default:
+            navigate('/manager-dashboard')
+        }
+      } else if (finalRole === 'donor') {
+        navigate('/donor-dashboard')
+      } else if (finalRole === 'ngo') {
+        navigate('/ngo-dashboard')
+      } else if (finalRole === 'driver') {
+        navigate('/driver-dashboard')
+      } else {
+        navigate('/')
       }
 
     } catch (err) {

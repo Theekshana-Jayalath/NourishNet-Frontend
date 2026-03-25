@@ -1,5 +1,5 @@
 import React from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import Header from './components/Header'
 import Footer from './components/Footer'
 import Apply from './pages/Apply'
@@ -17,6 +17,28 @@ import DriverDashboard from './pages/DriverDashboard'
 const App = () => {
   return (
     <BrowserRouter>
+      <Main />
+    </BrowserRouter>
+  )
+}
+
+function Main() {
+  const location = useLocation()
+  // routes where we don't want to show the global footer
+  const hideFooterPaths = [
+    '/manager-dashboard',
+    '/donor-dashboard',
+    '/ngo-dashboard',
+    '/driver-dashboard',
+    '/ngo-manager-dashboard',
+    '/donor-manager-dashboard',
+    '/driver-manager-dashboard'
+  ]
+
+  const shouldHideFooter = hideFooterPaths.some(p => location.pathname.startsWith(p))
+
+  return (
+    <>
       <Routes>
         <Route path='/' element={<Header />} />
   <Route path='/apply' element={<Apply />} />
@@ -33,8 +55,8 @@ const App = () => {
         <Route path='/ngo-dashboard' element={<NgoDashboard />} />
         <Route path='/driver-dashboard' element={<DriverDashboard />} />
       </Routes>
-  <Footer />
-    </BrowserRouter>
+      {!shouldHideFooter && <Footer />}
+    </>
   )
 }
 

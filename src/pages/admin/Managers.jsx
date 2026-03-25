@@ -39,15 +39,27 @@ const Managers = () => {
   const token = localStorage.getItem('token')
   const authHeaders = token ? { Authorization: `Bearer ${token}` } : {}
   const res = await fetch('/api/users', { headers: { ...authHeaders } })
-      if (res.ok) {
+        if (res.ok) {
         const data = await res.json().catch(() => null)
         // accept array or {count,data}
         const items = Array.isArray(data) ? data : (data?.data || [])
         // try to filter managers by role or managerType
-        const filtered = items.filter(u => u.role === 'manager' || u.managerType || u.role === 'manager')
+        const filtered = items.filter(u => (u.role && u.role.toString().toLowerCase() === 'manager') || u.managerType || u.department)
         if (filtered.length > 0) {
-          setManagers(filtered.map(u => ({ id: u._id || u.userId || u.id || (u.username+Math.random()), name: u.name || u.username, email: u.email || '', username: u.username, managerType: u.managerType || 'DONOR_MANAGER' })))
-          storage.set(filtered)
+          const mapped = filtered.map(u => {
+            const id = u._id || u.userId || u.id || (u.username+Math.random())
+            const name = u.name || u.username
+            const email = u.email || ''
+            const username = u.username
+            // prefer explicit managerType, else derive from department, else default
+            let managerType = null
+            if (u.managerType) managerType = u.managerType
+            else if (u.department) managerType = (u.department.toString().toUpperCase() + '_MANAGER')
+            else managerType = 'DONOR_MANAGER'
+            return { id, name, email, username, managerType }
+          })
+          setManagers(mapped)
+          storage.set(mapped)
           setLoading(false)
           return
         }
@@ -79,14 +91,14 @@ const Managers = () => {
         if (res.ok) {
           await loadManagers(); setModalOpen(false); return
         }
-        } else {
-        // Create via admin users endpoint so manager is saved into users collection
-        const body = { name: payload.name, email: payload.email, username: payload.username, password: payload.password || Math.random().toString(36).slice(-8), role: 'manager' }
+    } else {
+    // Create via admin users endpoint so manager is saved into employees collection; include managerType
+    const body = { name: payload.name, email: payload.email, username: payload.username, password: payload.password || Math.random().toString(36).slice(-8), role: 'manager', managerType: payload.managerType }
   const token = localStorage.getItem('token')
   const headers = token ? { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } : { 'Content-Type': 'application/json' }
   const res = await fetch('/api/users', { method: 'POST', headers, body: JSON.stringify(body) })
-        if (res.ok) { await loadManagers(); setModalOpen(false); return }
-      }
+    if (res.ok) { await loadManagers(); setModalOpen(false); return }
+  }
     } catch (err) {
       // ignore - fallback to local
     }

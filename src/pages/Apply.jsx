@@ -18,17 +18,20 @@ const Apply = () => {
   const [city, setCity] = useState('')
   const [organizationName, setOrganizationName] = useState('')
   const [registrationNumber, setRegistrationNumber] = useState('')
+  const [members, setMembers] = useState([{ name: '', contact: '' }])
   const [vehicleType, setVehicleType] = useState('')
   const [licenseNumber, setLicenseNumber] = useState('')
   const [notes, setNotes] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [serverErrors, setServerErrors] = useState([])
 
   useEffect(() => { console.log('[Apply] mounted') }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError(''); setSuccess('')
+  setServerErrors([])
 
     if (!name || !email || !username || !password || !confirmPassword || !role) {
       setError('Please fill Name, Email, Username, Password, Confirm Password and select a Role.')
@@ -44,6 +47,12 @@ const Apply = () => {
   const raw = { name, email, username, password, role, notes, status: 'pending', nic, address, city }
   if (r === 'donor') { raw.donorType = donorType; raw.contact = contactNumber }
     if (r === 'ngo') { raw.organizationName = organizationName; raw.registrationNumber = registrationNumber; raw.contact = contactNumber }
+    // include members if any provided
+    if (r === 'ngo' && Array.isArray(members) && members.length > 0) {
+      // filter out empty entries
+      const cleaned = members.map(m => ({ name: (m.name || '').trim(), contact: (m.contact || '').trim() })).filter(m => m.name || m.contact)
+      if (cleaned.length > 0) raw.members = cleaned
+    }
     if (r === 'driver') { raw.vehicleType = vehicleType; raw.licenseNumber = licenseNumber; raw.contact = contactNumber }
 
     const payload = Object.entries(raw).reduce((acc, [k, v]) => { if (v !== undefined && v !== null && v !== '') acc[k] = v; return acc }, {})
@@ -56,14 +65,20 @@ const Apply = () => {
       console.log('Fetch options:', fetchOptions)
       const res = await fetch(url, fetchOptions)
       console.log('Application submit response status:', res.status)
-      const data = await res.json().catch(() => null)
+  const data = await res.json().catch(() => null)
       console.log('Application submit response body:', data)
       if (res.status === 201) {
         setSuccess('Application submitted successfully')
-  setName(''); setEmail(''); setUsername(''); setPassword(''); setConfirmPassword(''); setRole(''); setContactNumber(''); setDonorType(''); setOrganizationName(''); setRegistrationNumber(''); setVehicleType(''); setLicenseNumber(''); setNotes(''); setNic(''); setAddress(''); setCity('')
+      setName(''); setEmail(''); setUsername(''); setPassword(''); setConfirmPassword(''); setRole(''); setContactNumber(''); setDonorType(''); setOrganizationName(''); setRegistrationNumber(''); setVehicleType(''); setLicenseNumber(''); setNotes(''); setNic(''); setAddress(''); setCity(''); setMembers([{ name: '', contact: '' }])
         return
       }
-      setError((data && (data.message || data.error)) || `Submission failed (status ${res.status})`)
+      // if backend returned structured validation errors, show them as a list for the user
+      if (data && Array.isArray(data.errors) && data.errors.length > 0) {
+        setServerErrors(data.errors)
+        setError(data.message || `Submission failed (status ${res.status})`)
+      } else {
+        setError((data && (data.message || data.error)) || `Submission failed (status ${res.status})`)
+      }
     } catch (err) {
       console.error('Application submit error:', err)
       setError('Network error while submitting application')
@@ -77,6 +92,14 @@ const Apply = () => {
         <p className='text-sm text-gray-600 mb-6'>Apply to join NourishNet as a Donor, NGO or Driver. We'll review and get back to you.</p>
 
         {error && <div className='mb-4 text-sm text-red-700 bg-red-100 px-4 py-2 rounded'>{error}</div>}
+        {serverErrors && serverErrors.length > 0 && (
+          <div className='mb-4 text-sm text-red-700 bg-red-50 px-4 py-2 rounded'>
+            <strong className='block mb-1'>Validation details:</strong>
+            <ul className='list-disc list-inside space-y-1'>
+              {serverErrors.map((s, i) => <li key={i}>{s}</li>)}
+            </ul>
+          </div>
+        )}
         {success && <div className='mb-4 text-sm text-green-700 bg-green-100 px-4 py-2 rounded'>{success}</div>}
 
         <form onSubmit={handleSubmit} className='space-y-4'>
@@ -183,6 +206,38 @@ const Apply = () => {
               <div>
                 <label className='text-sm block mb-1'>Contact Number</label>
                 <input value={contactNumber} onChange={e => setContactNumber(e.target.value)} className='w-full border px-3 py-2 rounded' />
+              </div>
+            </div>
+          )}
+
+          {role === 'ngo' && (
+            <div className='mt-4'>
+              <label className='text-sm block mb-2 font-medium'>Organization Members (optional)</label>
+              <div className='space-y-3'>
+                {members.map((m, idx) => (
+                  <div key={idx} className='grid grid-cols-3 gap-3 items-end'>
+                    <div>
+                      <label className='text-xs block mb-1'>Member name</label>
+                      <input value={m.name} onChange={e => {
+                        const copy = [...members]; copy[idx] = { ...copy[idx], name: e.target.value }; setMembers(copy)
+                      }} className='w-full border px-3 py-2 rounded' placeholder='Full name' />
+                    </div>
+                    <div>
+                      <label className='text-xs block mb-1'>Contact</label>
+                      <input value={m.contact} onChange={e => {
+                        const copy = [...members]; copy[idx] = { ...copy[idx], contact: e.target.value }; setMembers(copy)
+                      }} className='w-full border px-3 py-2 rounded' placeholder='Phone or email' />
+                    </div>
+                    <div className='flex gap-2'>
+                      <button type='button' onClick={() => {
+                        const copy = [...members]; copy.splice(idx, 1); setMembers(copy.length ? copy : [{ name: '', contact: '' }])
+                      }} className='px-3 py-2 bg-red-100 text-red-700 rounded'>Remove</button>
+                      {idx === members.length - 1 && (
+                        <button type='button' onClick={() => setMembers([...members, { name: '', contact: '' }])} className='px-3 py-2 bg-green-100 text-green-700 rounded'>Add</button>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
