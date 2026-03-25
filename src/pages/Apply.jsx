@@ -19,6 +19,7 @@ const Apply = () => {
   const [organizationName, setOrganizationName] = useState('')
   const [registrationNumber, setRegistrationNumber] = useState('')
   const [members, setMembers] = useState([{ name: '', contact: '' }])
+  const [vehicleNumber, setVehicleNumber] = useState('')
   const [vehicleType, setVehicleType] = useState('')
   const [licenseNumber, setLicenseNumber] = useState('')
   const [notes, setNotes] = useState('')
@@ -42,7 +43,7 @@ const Apply = () => {
     const r = (role || '').toString().toLowerCase()
   if (r === 'donor' && (!donorType || !contactNumber)) { setError('Donor: please select donor type and provide contact number'); return }
     if (r === 'ngo' && (!organizationName || !registrationNumber || !contactNumber)) { setError('NGO: please provide organization name, registration number and contact number'); return }
-    if (r === 'driver' && (!vehicleType || !licenseNumber || !contactNumber)) { setError('Driver: please provide vehicle type, license number and contact number'); return }
+  if (r === 'driver' && (!vehicleType || !licenseNumber || !contactNumber || !vehicleNumber)) { setError('Driver: please provide vehicle type, vehicle number, license number and contact number'); return }
 
   const raw = { name, email, username, password, role, notes, status: 'pending', nic, address, city }
   if (r === 'donor') { raw.donorType = donorType; raw.contact = contactNumber }
@@ -53,7 +54,7 @@ const Apply = () => {
       const cleaned = members.map(m => ({ name: (m.name || '').trim(), contact: (m.contact || '').trim() })).filter(m => m.name || m.contact)
       if (cleaned.length > 0) raw.members = cleaned
     }
-    if (r === 'driver') { raw.vehicleType = vehicleType; raw.licenseNumber = licenseNumber; raw.contact = contactNumber }
+  if (r === 'driver') { raw.vehicleType = vehicleType; raw.vehicleNumber = vehicleNumber; raw.licenseNumber = licenseNumber; raw.contact = contactNumber }
 
     const payload = Object.entries(raw).reduce((acc, [k, v]) => { if (v !== undefined && v !== null && v !== '') acc[k] = v; return acc }, {})
 
@@ -100,44 +101,62 @@ const Apply = () => {
             </ul>
           </div>
         )}
-        {success && <div className='mb-4 text-sm text-green-700 bg-green-100 px-4 py-2 rounded'>{success}</div>}
 
-        <form onSubmit={handleSubmit} className='space-y-4'>
+        {success ? (
+          <div className='py-12 flex flex-col items-center justify-center'>
+            <div className='w-full max-w-xl text-center bg-green-50 border border-green-100 rounded-lg p-8'>
+              <svg xmlns='http://www.w3.org/2000/svg' className='mx-auto mb-4 h-12 w-12 text-green-600' viewBox='0 0 20 20' fill='currentColor'>
+                <path fillRule='evenodd' d='M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 10-1.414 1.414l2 2a1 1 0 001.414 0l4-4z' clipRule='evenodd' />
+              </svg>
+              <h3 className='text-xl font-semibold text-green-800 mb-2'>{success}</h3>
+              <p className='text-sm text-gray-700 mb-6'>Thanks for applying. We'll review your application and contact you at the email provided.</p>
+              <div className='flex items-center justify-center gap-4'>
+                <button onClick={() => navigate('/')} className='inline-flex items-center gap-2 px-4 py-2 rounded bg-white border text-gray-700 hover:bg-gray-50'>
+                  <svg xmlns='http://www.w3.org/2000/svg' className='w-4 h-4' viewBox='0 0 20 20' fill='currentColor'>
+                    <path fillRule='evenodd' d='M7.707 14.707a1 1 0 01-1.414 0L2.586 11l3.707-3.707a1 1 0 011.414 1.414L5.414 11l2.293 2.293a1 1 0 010 1.414z' clipRule='evenodd' />
+                  </svg>
+                  Back to Home
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className='space-y-4'>
           <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
             <div>
               <label className='text-sm block mb-1'>Full name</label>
-              <input value={name} onChange={e => setName(e.target.value)} className='w-full border px-3 py-2 rounded' required />
+              <input placeholder='e.g. Jane Doe' value={name} onChange={e => setName(e.target.value)} className='w-full border px-3 py-2 rounded' required />
             </div>
             <div>
               <label className='text-sm block mb-1'>Email</label>
-              <input value={email} onChange={e => setEmail(e.target.value)} type='email' className='w-full border px-3 py-2 rounded' required />
+              <input placeholder='e.g. jane@example.org' value={email} onChange={e => setEmail(e.target.value)} type='email' className='w-full border px-3 py-2 rounded' required />
             </div>
           </div>
 
           <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
             <div>
               <label className='text-sm block mb-1'>NIC</label>
-              <input value={nic} onChange={e => setNic(e.target.value)} className='w-full border px-3 py-2 rounded' />
+              <input placeholder='e.g. 891234567V' value={nic} onChange={e => setNic(e.target.value)} className='w-full border px-3 py-2 rounded' />
             </div>
             <div>
               <label className='text-sm block mb-1'>City</label>
-              <input value={city} onChange={e => setCity(e.target.value)} className='w-full border px-3 py-2 rounded' />
+              <input placeholder='e.g. Colombo' value={city} onChange={e => setCity(e.target.value)} className='w-full border px-3 py-2 rounded' />
             </div>
             <div>
               <label className='text-sm block mb-1'>Address</label>
-              <input value={address} onChange={e => setAddress(e.target.value)} className='w-full border px-3 py-2 rounded' />
+              <input placeholder='e.g. 123 Galle Rd' value={address} onChange={e => setAddress(e.target.value)} className='w-full border px-3 py-2 rounded' />
             </div>
           </div>
 
           <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
             <div>
               <label className='text-sm block mb-1'>Username</label>
-              <input value={username} onChange={e => setUsername(e.target.value)} className='w-full border px-3 py-2 rounded' required />
+              <input placeholder='desired username' value={username} onChange={e => setUsername(e.target.value)} className='w-full border px-3 py-2 rounded' required />
             </div>
             <div>
               <label className='text-sm block mb-1'>Password</label>
               <div className='flex items-center border rounded-md px-3 py-2'>
-                <input value={password} onChange={e => setPassword(e.target.value)} type={showPassword ? 'text' : 'password'} className='w-full outline-none' required />
+                <input placeholder='Choose a strong password' value={password} onChange={e => setPassword(e.target.value)} type={showPassword ? 'text' : 'password'} className='w-full outline-none' required />
                 <button type='button' onClick={() => setShowPassword(s => !s)} className='ml-2 text-gray-500 hover:text-gray-700' aria-label='Toggle password visibility'>
                   {showPassword ? (
                     <svg xmlns='http://www.w3.org/2000/svg' className='w-5 h-5' viewBox='0 0 24 24' fill='none' stroke='currentColor'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z'/><path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M15 12a3 3 0 11-6 0 3 3 0 016 0z'/></svg>
@@ -150,7 +169,7 @@ const Apply = () => {
             <div>
               <label className='text-sm block mb-1'>Confirm Password</label>
               <div className='flex items-center border rounded-md px-3 py-2'>
-                <input value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} type={showConfirm ? 'text' : 'password'} className='w-full outline-none' required />
+                <input placeholder='Re-type your password' value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} type={showConfirm ? 'text' : 'password'} className='w-full outline-none' required />
                 <button type='button' onClick={() => setShowConfirm(s => !s)} className='ml-2 text-gray-500 hover:text-gray-700' aria-label='Toggle confirm password visibility'>
                   {showConfirm ? (
                     <svg xmlns='http://www.w3.org/2000/svg' className='w-5 h-5' viewBox='0 0 24 24' fill='none' stroke='currentColor'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z'/><path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M15 12a3 3 0 11-6 0 3 3 0 016 0z'/></svg>
@@ -188,7 +207,7 @@ const Apply = () => {
               </div>
               <div>
                 <label className='text-sm block mb-1'>Contact Number</label>
-                <input value={contactNumber} onChange={e => setContactNumber(e.target.value)} className='w-full border px-3 py-2 rounded' />
+                <input placeholder='e.g. +94 77 123 4567' value={contactNumber} onChange={e => setContactNumber(e.target.value)} className='w-full border px-3 py-2 rounded' required={role === 'donor'} />
               </div>
             </div>
           )}
@@ -197,15 +216,15 @@ const Apply = () => {
             <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
               <div>
                 <label className='text-sm block mb-1'>Organization Name</label>
-                <input value={organizationName} onChange={e => setOrganizationName(e.target.value)} className='w-full border px-3 py-2 rounded' />
+                <input placeholder='e.g. Helping Hands' value={organizationName} onChange={e => setOrganizationName(e.target.value)} className='w-full border px-3 py-2 rounded' required={role === 'ngo'} />
               </div>
               <div>
                 <label className='text-sm block mb-1'>Registration Number</label>
-                <input value={registrationNumber} onChange={e => setRegistrationNumber(e.target.value)} className='w-full border px-3 py-2 rounded' />
+                <input placeholder='e.g. REG-2023-001' value={registrationNumber} onChange={e => setRegistrationNumber(e.target.value)} className='w-full border px-3 py-2 rounded' required={role === 'ngo'} />
               </div>
               <div>
                 <label className='text-sm block mb-1'>Contact Number</label>
-                <input value={contactNumber} onChange={e => setContactNumber(e.target.value)} className='w-full border px-3 py-2 rounded' />
+                <input placeholder='e.g. +94 71 234 5678' value={contactNumber} onChange={e => setContactNumber(e.target.value)} className='w-full border px-3 py-2 rounded' required={role === 'ngo'} />
               </div>
             </div>
           )}
@@ -246,15 +265,19 @@ const Apply = () => {
             <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
               <div>
                 <label className='text-sm block mb-1'>Vehicle Type</label>
-                <input value={vehicleType} onChange={e => setVehicleType(e.target.value)} className='w-full border px-3 py-2 rounded' />
+                <input placeholder='e.g. Van, Motorcycle' value={vehicleType} onChange={e => setVehicleType(e.target.value)} className='w-full border px-3 py-2 rounded' required={role === 'driver'} />
+              </div>
+              <div>
+                <label className='text-sm block mb-1'>Vehicle Number</label>
+                <input placeholder='e.g. ABC-1234' value={vehicleNumber} onChange={e => setVehicleNumber(e.target.value)} className='w-full border px-3 py-2 rounded' required={role === 'driver'} />
               </div>
               <div>
                 <label className='text-sm block mb-1'>License Number</label>
-                <input value={licenseNumber} onChange={e => setLicenseNumber(e.target.value)} className='w-full border px-3 py-2 rounded' />
+                <input placeholder='e.g. L-123456' value={licenseNumber} onChange={e => setLicenseNumber(e.target.value)} className='w-full border px-3 py-2 rounded' required={role === 'driver'} />
               </div>
               <div>
                 <label className='text-sm block mb-1'>Contact Number</label>
-                <input value={contactNumber} onChange={e => setContactNumber(e.target.value)} className='w-full border px-3 py-2 rounded' />
+                <input placeholder='e.g. +94 77 345 6789' value={contactNumber} onChange={e => setContactNumber(e.target.value)} className='w-full border px-3 py-2 rounded' required={role === 'driver'} />
               </div>
             </div>
           )}
@@ -268,6 +291,7 @@ const Apply = () => {
             <button type='submit' className='px-6 py-2 rounded bg-[#317873] text-white font-semibold'>Submit Application</button>
           </div>
         </form>
+        )}
       </div>
     </div>
   )
