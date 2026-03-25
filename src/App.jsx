@@ -24,8 +24,10 @@ const App = () => {
 
 function Main() {
   const location = useLocation()
+  
   // routes where we don't want to show the global footer
   const hideFooterPaths = [
+    '/admin-dashboard',
     '/manager-dashboard',
     '/donor-dashboard',
     '/ngo-dashboard',
@@ -41,27 +43,32 @@ function Main() {
     <>
       <Routes>
         <Route path='/' element={<Header />} />
-  <Route path='/apply' element={<Apply />} />
+        <Route path='/apply' element={<Apply />} />
         <Route path='/login' element={<Login />} />
+        
+        {/* Admin Dashboard */}
         <Route path='/admin-dashboard/*' element={<AdminDashboard />}>
-          <Route index element={<DashboardHome/>} />
-          <Route path='managers' element={<Managers/>} />
-          <Route path='users' element={<Users/>} />
+          <Route index element={<DashboardHome />} />
+          <Route path='managers' element={<Managers />} />
+          <Route path='users' element={<Users />} />
           <Route path='inventory' element={<div className='p-6'>Inventory management coming soon.</div>} />
-          <Route path='applications' element={<Applications/>} />
+          <Route path='applications' element={<Applications />} />
         </Route>
-            <Route path='/manager-dashboard' element={<ManagerDashboard />} />
-            <Route path='/donor-dashboard' element={<DonorDashboard />} />
-            <Route path='/ngo-dashboard' element={<NgoDashboard />} />
-            <Route path='/driver-dashboard' element={<DriverDashboard />} />
-            {/* manager-specific named routes (Login redirects here) */}
-            <Route path='/ngo-manager-dashboard' element={<NgoDashboard />} />
-            {/* Removed DonorManagerDashboard route */}
-            <Route path='/driver-manager-dashboard' element={<DriverDashboard />} />
+        
+        {/* User Dashboards */}
+        <Route path='/manager-dashboard' element={<ManagerDashboard />} />
+        <Route path='/donor-dashboard' element={<DonorDashboard />} />
+        <Route path='/ngo-dashboard' element={<NgoDashboard />} />
+        <Route path='/driver-dashboard' element={<DriverDashboard />} />
+        
+        {/* Manager-specific named routes (Login redirects here) */}
+        <Route path='/ngo-manager-dashboard' element={<NgoDashboard />} />
+        <Route path='/driver-manager-dashboard' element={<DriverDashboard />} />
       </Routes>
+      
       {!shouldHideFooter && <Footer />}
     </>
   )
 }
 
-export default App;
+export default App

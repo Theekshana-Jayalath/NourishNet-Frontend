@@ -27,14 +27,14 @@ const Login = () => {
     setLoading(true)
 
     try {
-  const base = import.meta.env.VITE_API_URL
-  // role is optional — server will determine actual role
+      const base = import.meta.env.VITE_API_URL
+      // role is optional — server will determine actual role
 
-  const url = base ? `${base}/api/auth/login` : '/api/auth/login'
-  const payload = { username, password }
-  console.log(username, password, role)
-  console.log('Login request body:', payload)
-  const res = await fetch(url, {
+      const url = base ? `${base}/api/auth/login` : '/api/auth/login'
+      const payload = { username, password }
+      console.log(username, password, role)
+      console.log('Login request body:', payload)
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -65,6 +65,17 @@ const Login = () => {
         return (tokenPayload?.role || '').toString().toLowerCase()
       })()
       const finalRole = serverRole || fallbackTokenRole || role
+
+      // Store user data in localStorage for getUser() to work
+      const userData = {
+        _id: data._id || data.userId || data.id || '',
+        username: data.username || username,
+        name: data.name || data.username || username,
+        email: data.email || '',
+        role: finalRole,
+        department: data.department || '',
+      }
+      localStorage.setItem('user', JSON.stringify(userData))
 
       // redirect based on server-provided role
       if (finalRole === 'admin') {
@@ -146,23 +157,23 @@ const Login = () => {
               <div>
                 <label className='block text-sm font-medium text-gray-700 mb-1'>Password</label>
                 <div className='flex items-center border rounded-md px-3 py-2 focus-within:ring-2' style={{ borderColor: '#e6f3f1' }}>
-                    <svg className='w-5 h-5 text-[#317873] mr-3' fill='none' stroke='currentColor' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M12 11c1.657 0 3 .895 3 2v1H9v-1c0-1.105 1.343-2 3-2z'></path><path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M17 11V9a5 5 0 10-10 0v2'></path></svg>
-                    <input
-                      className='w-full outline-none'
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder='password'
-                      required
-                    />
-                    <button type='button' onClick={() => setShowPassword(s => !s)} className='ml-2 text-gray-500 hover:text-gray-700' aria-label='Toggle password visibility'>
-                      {showPassword ? (
-                        <svg xmlns='http://www.w3.org/2000/svg' className='w-5 h-5' viewBox='0 0 24 24' fill='none' stroke='currentColor'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z'/><path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M15 12a3 3 0 11-6 0 3 3 0 016 0z'/></svg>
-                      ) : (
-                        <svg xmlns='http://www.w3.org/2000/svg' className='w-5 h-5' viewBox='0 0 24 24' fill='none' stroke='currentColor'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M13.875 18.825A10.05 10.05 0 0112 19c-5 0-9-3.5-10-8 1-3.5 5-6 10-6 1.63 0 3.17.28 4.54.78M15 12a3 3 0 11-6 0 3 3 0 016 0z'/><path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M3 3l18 18'/></svg>
-                      )}
-                    </button>
-                  </div>
+                  <svg className='w-5 h-5 text-[#317873] mr-3' fill='none' stroke='currentColor' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M12 11c1.657 0 3 .895 3 2v1H9v-1c0-1.105 1.343-2 3-2z'></path><path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M17 11V9a5 5 0 10-10 0v2'></path></svg>
+                  <input
+                    className='w-full outline-none'
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder='password'
+                    required
+                  />
+                  <button type='button' onClick={() => setShowPassword(s => !s)} className='ml-2 text-gray-500 hover:text-gray-700' aria-label='Toggle password visibility'>
+                    {showPassword ? (
+                      <svg xmlns='http://www.w3.org/2000/svg' className='w-5 h-5' viewBox='0 0 24 24' fill='none' stroke='currentColor'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z'/><path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M15 12a3 3 0 11-6 0 3 3 0 016 0z'/></svg>
+                    ) : (
+                      <svg xmlns='http://www.w3.org/2000/svg' className='w-5 h-5' viewBox='0 0 24 24' fill='none' stroke='currentColor'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M13.875 18.825A10.05 10.05 0 0112 19c-5 0-9-3.5-10-8 1-3.5 5-6 10-6 1.63 0 3.17.28 4.54.78M15 12a3 3 0 11-6 0 3 3 0 016 0z'/><path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M3 3l18 18'/></svg>
+                    )}
+                  </button>
+                </div>
               </div>
 
               <div className='flex items-center justify-between text-sm'>
