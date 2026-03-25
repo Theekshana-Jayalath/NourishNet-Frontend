@@ -50,10 +50,14 @@ function Main() {
           <Route path='inventory' element={<div className='p-6'>Inventory management coming soon.</div>} />
           <Route path='applications' element={<Applications/>} />
         </Route>
-        <Route path='/manager-dashboard' element={<ManagerDashboard />} />
-        <Route path='/donor-dashboard' element={<DonorDashboard />} />
-        <Route path='/ngo-dashboard' element={<NgoDashboard />} />
-        <Route path='/driver-dashboard' element={<DriverDashboard />} />
+            <Route path='/manager-dashboard' element={<ManagerDashboard />} />
+            <Route path='/donor-dashboard' element={<DonorDashboard />} />
+            <Route path='/ngo-dashboard' element={<NgoDashboard />} />
+            <Route path='/driver-dashboard' element={<DriverDashboard />} />
+            {/* manager-specific named routes (Login redirects here) */}
+            <Route path='/ngo-manager-dashboard' element={<NgoDashboard />} />
+            {/* Removed DonorManagerDashboard route */}
+            <Route path='/driver-manager-dashboard' element={<DriverDashboard />} />
       </Routes>
       {!shouldHideFooter && <Footer />}
     </>
