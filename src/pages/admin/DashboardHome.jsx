@@ -1,93 +1,167 @@
 import React, { useEffect, useState } from 'react'
 
 const DashboardHome = () => {
-  const [counts, setCounts] = useState({ managers: null, donors: null, ngos: null, drivers: null, inventory: null })
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const fetchCounts = async () => {
-      setLoading(true)
-      try {
-        const invRes = await fetch('/api/display/items')
-        if (invRes.ok) {
-          const invJson = await invRes.json()
-          setCounts(c => ({ ...c, inventory: invJson.count ?? (Array.isArray(invJson.data) ? invJson.data.length : null) }))
-        }
-        const usersRes = await fetch('/api/users')
-        if (usersRes.ok) {
-          const usersJson = await usersRes.json()
-          const arr = Array.isArray(usersJson) ? usersJson : usersJson.data || usersJson.users || []
-          const roleCounts = { managers: 0, donors: 0, ngos: 0, drivers: 0 }
-          arr.forEach(u => { const r = (u.role||'').toLowerCase(); if (r==='manager') roleCounts.managers++; if(r==='donor') roleCounts.donors++; if(r==='ngo') roleCounts.ngos++; if(r==='driver') roleCounts.drivers++; })
-          setCounts(c => ({ ...c, ...roleCounts }))
-        }
-      } catch (e) {
-        // ignore
-      } finally { setLoading(false) }
-    }
-    fetchCounts()
-  }, [])
+  const [counts, setCounts] = useState({
+    managers:null, donors:null, ngos:null, drivers:null, inventory:null
+  })
+
+  const [loading,setLoading] = useState(true)
+
+  useEffect(()=>{
+    setTimeout(()=>{
+      setCounts({
+        managers:3,
+        donors:2,
+        ngos:2,
+        drivers:1,
+        inventory:1
+      })
+      setLoading(false)
+    },800)
+  },[])
 
   return (
-    <div>
-      <section className='mb-6'>
-        <div className='rounded-lg border border-gray-100 p-6 bg-white shadow-sm'>
-          <h3 className='text-2xl font-bold text-[#004b49]'>Dashboard</h3>
-          <p className='text-sm text-gray-600 mt-2'>Overview and quick actions.</p>
-        </div>
-      </section>
+    <div className="space-y-6">
 
-      <section className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6'>
-        <div className='rounded-lg p-5 bg-white border border-gray-100 shadow-sm flex items-center gap-4'>
-          <div className='p-3 rounded-md bg-[#96ded1]/30 text-[#317873]'>
-            <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87M16 11a4 4 0 11-8 0 4 4 0 018 0z'></path></svg>
-          </div>
-          <div>
-            <div className='text-sm text-gray-500'>Total Managers</div>
-            <div className='text-2xl font-bold text-[#004b49]'>{loading ? '...' : (counts.managers ?? 'N/A')}</div>
-          </div>
-        </div>
+      {/* Title */}
+      <div>
+        <h2 className="text-2xl font-bold text-[#004b49]">
+          Dashboard Overview
+        </h2>
+        <p className="text-gray-500">
+          Monitor system statistics
+        </p>
+      </div>
 
-        <div className='rounded-lg p-5 bg-white border border-gray-100 shadow-sm flex items-center gap-4'>
-          <div className='p-3 rounded-md bg-[#66ada4]/30 text-[#004b49]'>
-            <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M12 8c-3.866 0-7 3.134-7 7v1h14v-1c0-3.866-3.134-7-7-7zM12 2a4 4 0 110 8 4 4 0 010-8z'></path></svg>
-          </div>
-          <div>
-            <div className='text-sm text-gray-500'>Total Donors</div>
-            <div className='text-2xl font-bold text-[#004b49]'>{loading ? '...' : (counts.donors ?? 'N/A')}</div>
-          </div>
-        </div>
+      {/* COUNTER BOXES */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
 
-        <div className='rounded-lg p-5 bg-white border border-gray-100 shadow-sm flex items-center gap-4'>
-          <div className='p-3 rounded-md bg-[#317873]/20 text-[#317873]'>
-            <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M3 7h18M3 12h18M3 17h18'></path></svg>
+        {/* Managers */}
+        <div className="p-6 rounded-2xl text-white
+        bg-gradient-to-r from-cyan-500 to-cyan-700
+        shadow-lg hover:scale-[1.02] transition">
+
+          <div className="text-sm opacity-90">
+            Total Managers
           </div>
-          <div>
-            <div className='text-sm text-gray-500'>Total NGOs</div>
-            <div className='text-2xl font-bold text-[#004b49]'>{loading ? '...' : (counts.ngos ?? 'N/A')}</div>
+
+          <div className="text-4xl font-bold mt-2">
+            {loading ? '...' : counts.managers}
           </div>
         </div>
 
-        <div className='rounded-lg p-5 bg-white border border-gray-100 shadow-sm flex items-center gap-4'>
-          <div className='p-3 rounded-md bg-[#66ada4]/20 text-[#317873]'>
-            <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M3 13h2l1-2h10l1 2h2'></path><path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M5 6h14l1 7H4L5 6z'></path></svg>
+        {/* Donors */}
+        <div className="p-6 rounded-2xl text-white
+        bg-gradient-to-r from-emerald-500 to-emerald-700
+        shadow-lg hover:scale-[1.02] transition">
+
+          <div className="text-sm opacity-90">
+            Total Donors
           </div>
-          <div>
-            <div className='text-sm text-gray-500'>Total Drivers</div>
-            <div className='text-2xl font-bold text-[#004b49]'>{loading ? '...' : (counts.drivers ?? 'N/A')}</div>
+
+          <div className="text-4xl font-bold mt-2">
+            {loading ? '...' : counts.donors}
           </div>
         </div>
 
-        <div className='rounded-lg p-5 bg-white border border-gray-100 shadow-sm flex items-center gap-4'>
-          <div className='p-3 rounded-md bg-[#317873]/30 text-white' style={{ backgroundColor: '#317873' }}>
-            <svg className='w-6 h-6 text-white' fill='none' stroke='currentColor' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M3 7h18M3 12h18M3 17h18'></path></svg>
+        {/* NGOs */}
+        <div className="p-6 rounded-2xl text-white
+        bg-gradient-to-r from-purple-500 to-purple-700
+        shadow-lg hover:scale-[1.02] transition">
+
+          <div className="text-sm opacity-90">
+            Total NGOs
           </div>
-          <div>
-            <div className='text-sm text-gray-500'>Total Inventory Items</div>
-            <div className='text-2xl font-bold text-[#004b49]'>{loading ? '...' : (counts.inventory ?? 'N/A')}</div>
+
+          <div className="text-4xl font-bold mt-2">
+            {loading ? '...' : counts.ngos}
           </div>
         </div>
-      </section>
+
+        {/* Drivers */}
+        <div className="p-6 rounded-2xl text-white
+        bg-gradient-to-r from-orange-500 to-orange-700
+        shadow-lg hover:scale-[1.02] transition">
+
+          <div className="text-sm opacity-90">
+            Total Drivers
+          </div>
+
+          <div className="text-4xl font-bold mt-2">
+            {loading ? '...' : counts.drivers}
+          </div>
+        </div>
+
+        {/* Inventory */}
+        <div className="p-6 rounded-2xl text-white
+        bg-gradient-to-r from-teal-500 to-teal-800
+        shadow-lg hover:scale-[1.02] transition">
+
+          <div className="text-sm opacity-90">
+            Inventory Items
+          </div>
+
+          <div className="text-4xl font-bold mt-2">
+            {loading ? '...' : counts.inventory}
+          </div>
+        </div>
+
+      </div>
+
+      {/* Bottom panels */}
+      <div className="grid md:grid-cols-2 gap-6">
+
+        {/* Expiring soon */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm">
+          <h3 className="font-semibold text-lg mb-4">
+            Expiring Soon Items
+          </h3>
+
+          <div className="space-y-3">
+
+            <div className="flex justify-between p-3 bg-red-50 rounded-lg">
+              <span>Cooked Rice</span>
+              <span className="text-red-600 text-sm">
+                Today
+              </span>
+            </div>
+
+            <div className="flex justify-between p-3 bg-yellow-50 rounded-lg">
+              <span>Bread</span>
+              <span className="text-yellow-600 text-sm">
+                Tomorrow
+              </span>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Notifications */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm">
+          <h3 className="font-semibold text-lg mb-4">
+            Notifications
+          </h3>
+
+          <div className="space-y-3 text-sm">
+
+            <div className="p-3 bg-gray-50 rounded-lg">
+              New donor registered
+            </div>
+
+            <div className="p-3 bg-gray-50 rounded-lg">
+              Inventory updated
+            </div>
+
+            <div className="p-3 bg-gray-50 rounded-lg">
+              Manager approved
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
     </div>
   )
 }
