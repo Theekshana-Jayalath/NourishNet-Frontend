@@ -231,7 +231,7 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Role */}
+            {/* Role
             <div>
               <label className="text-sm font-medium text-gray-700">
                 Role (optional)
@@ -252,7 +252,7 @@ const Login = () => {
                 <option value="ngo">NGO</option>
                 <option value="driver">Driver</option>
               </select>
-            </div>
+            </div> */}
 
             {/* Remember */}
             <div className="flex justify-between text-sm">
