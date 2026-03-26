@@ -52,13 +52,18 @@ const Login = () => {
         setLoading(false)
         return
       }
-      
+      // persist token for authenticated API calls (DashboardHome reads this)
+      try { localStorage.setItem('token', token) } catch (_) {}
+
       const serverRole = (data.role || '').toString().toLowerCase()
       const fallbackTokenRole = (() => {
         const tokenPayload = decodeJwt(token)
         return (tokenPayload?.role || '').toString().toLowerCase()
       })()
       const finalRole = serverRole || fallbackTokenRole || role
+
+      // persist role for client-side routing/UX
+      try { localStorage.setItem('role', finalRole) } catch (_) {}
 
       if (finalRole === 'admin') {
         navigate('/admin-dashboard')
@@ -226,7 +231,7 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Role */}
+            {/* Role
             <div>
               <label className="text-sm font-medium text-gray-700">
                 Role (optional)
@@ -247,7 +252,7 @@ const Login = () => {
                 <option value="ngo">NGO</option>
                 <option value="driver">Driver</option>
               </select>
-            </div>
+            </div> */}
 
             {/* Remember */}
             <div className="flex justify-between text-sm">

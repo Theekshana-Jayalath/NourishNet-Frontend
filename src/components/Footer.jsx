@@ -30,7 +30,7 @@ const Footer = () => {
 
         <div>
           <h5 className='font-semibold mb-2'>Contact</h5>
-          <p className='text-sm opacity-90'>Email: <a href='mailto:info@nourishnet.org' className='underline'>info@nourishnet.org</a></p>
+          <p className='text-sm opacity-90'>Email: <a href='mailto:nourishnet.system@gmail.com' className='underline'>nourishnet.system@gmail.com</a></p>
           <p className='text-sm opacity-90 mt-2'>Follow us</p>
           <div className='flex gap-3 mt-2'>
             <a aria-label='Twitter' className='w-8 h-8 rounded bg-white/10 flex items-center justify-center hover:bg-white/20'>
