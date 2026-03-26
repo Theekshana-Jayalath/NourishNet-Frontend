@@ -13,7 +13,7 @@ const AdminDashboard = () => {
 
         {/* Sidebar */}
         <aside className={`fixed inset-y-0 left-0 z-20 w-64 
-        bg-gradient-to-b from-[#96ded1] via-[#66ada4] to-[#317873]
+        bg-gradient-to-b from-[#74b7ab] via-[#54988f] to-[#29615d]
         p-6 shadow-xl transition-transform duration-200
         ${collapsed ? '-translate-x-full md:translate-x-0' : 'translate-x-0'}`}>
 
