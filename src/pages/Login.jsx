@@ -55,12 +55,20 @@ const Login = () => {
       localStorage.setItem('token', token)
 
       const tokenPayload = decodeJwt(token)
+
       const finalRole =
         (data.role || '').toString().toLowerCase() ||
+        (data.user?.role || '').toString().toLowerCase() ||
         (tokenPayload?.role || '').toString().toLowerCase() ||
         role
 
       localStorage.setItem('role', finalRole)
+
+      const finalDepartment =
+        (data.department || '').toString().toLowerCase() ||
+        (data.user?.department || '').toString().toLowerCase() ||
+        (tokenPayload?.department || '').toString().toLowerCase() ||
+        ''
 
       // Save full user details for Profile page
       const userFromResponse = data.user || {}
@@ -90,6 +98,7 @@ const Login = () => {
           data.email ||
           '',
         role: finalRole,
+        department: finalDepartment,
         nic:
           userFromResponse.nic ||
           data.nic ||
@@ -123,8 +132,7 @@ const Login = () => {
       if (finalRole === 'admin') {
         navigate('/admin-dashboard')
       } else if (finalRole === 'manager') {
-        const dept = (data.department || '').toString().toLowerCase()
-        switch (dept) {
+        switch (finalDepartment) {
           case 'ngo':
             navigate('/ngo-manager-dashboard')
             break

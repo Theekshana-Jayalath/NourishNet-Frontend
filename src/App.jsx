@@ -13,6 +13,7 @@ import DashboardHome from './pages/admin/DashboardHome'
 import DonorDashboard from './pages/DonorDashboard'
 import NgoDashboard from './pages/NgoDashboard'
 import DriverDashboard from './pages/DriverDashboard'
+import NgoManagerDashboard from './pages/NgoManagerDashboard'
 
 const App = () => {
   return (
@@ -58,7 +59,7 @@ function Main() {
             <Route path='/ngo-dashboard' element={<NgoDashboard />} />
             <Route path='/driver-dashboard' element={<DriverDashboard />} />
             {/* manager-specific named routes (Login redirects here) */}
-            <Route path='/ngo-manager-dashboard' element={<NgoDashboard />} />
+            <Route path='/ngo-manager-dashboard' element={<NgoManagerDashboard />} />
             {/* Removed DonorManagerDashboard route */}
             <Route path='/driver-manager-dashboard' element={<DriverDashboard />} />
       </Routes>
