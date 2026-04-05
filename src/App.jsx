@@ -13,7 +13,9 @@ import DashboardHome from './pages/admin/DashboardHome'
 import DonorDashboard from './pages/DonorDashboard'
 import NgoDashboard from './pages/NgoDashboard'
 import DriverDashboard from './pages/DriverDashboard'
-
+import DonationApplication from './pages/DonationApplication'
+import DonorHistory from './pages/DonorHistory'
+import DonorProfile from './pages/DonorProfile'
 const App = () => {
   return (
     <BrowserRouter>
@@ -55,12 +57,15 @@ function Main() {
         </Route>
             {/* <Route path='/manager-dashboard' element={<ManagerDashboard />} /> */}
             <Route path='/donor-dashboard' element={<DonorDashboard />} />
+            <Route path='/donor-history' element={<DonorHistory />} />
+            <Route path='/donor-profile' element={<DonorProfile />} />
             <Route path='/ngo-dashboard' element={<NgoDashboard />} />
             <Route path='/driver-dashboard' element={<DriverDashboard />} />
             {/* manager-specific named routes (Login redirects here) */}
             <Route path='/ngo-manager-dashboard' element={<NgoDashboard />} />
             {/* Removed DonorManagerDashboard route */}
             <Route path='/driver-manager-dashboard' element={<DriverDashboard />} />
+              <Route path='/DonationApplication' element={<DonationApplication />} />
       </Routes>
       
       {!shouldHideFooter && <Footer />}

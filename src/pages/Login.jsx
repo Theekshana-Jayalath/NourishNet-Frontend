@@ -54,6 +54,11 @@ const Login = () => {
       }
       // persist token for authenticated API calls (DashboardHome reads this)
       try { localStorage.setItem('token', token) } catch (_) {}
+      // persist full user object returned by server when available
+      try {
+        const serverUser = data.user || (data.userId ? { _id: data.userId, role: data.role } : null)
+        if (serverUser) localStorage.setItem('user', JSON.stringify(serverUser))
+      } catch (_) {}
 
       const serverRole = (data.role || '').toString().toLowerCase()
       const fallbackTokenRole = (() => {
