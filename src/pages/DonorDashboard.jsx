@@ -35,7 +35,7 @@ export default function DonorDashboard() {
       
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 z-50 flex h-full w-72 flex-col border-r border-[#96ded1]/10 bg-linear-to-b from-[#002a29] to-[#004b49] transform transition-transform duration-300 ${
+  className={`fixed left-0 top-0 z-50 flex h-full w-72 flex-col border-r border-[#96ded1]/10 bg-linear-to-b from-[#002a29] to-[#004b49] transform transition-transform duration-300 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -69,7 +69,7 @@ export default function DonorDashboard() {
           onClick={() => setSidebarOpen(true)}
           aria-label="Open menu"
           title="Open menu"
-          className="hidden lg:inline-flex fixed left-6 top-6 z-60 h-8 w-8 items-center justify-center rounded-md bg-[#317873] text-white hover:bg-[#275b54]"
+          className="hidden lg:inline-flex fixed left-6 top-6 z-50 h-8 w-8 items-center justify-center rounded-md bg-[#317873] text-white hover:bg-[#275b54]"
         >
           <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M4 6h16M4 12h16M4 18h16" />
@@ -85,11 +85,11 @@ export default function DonorDashboard() {
 
           {/* Background Image */}
           <div className="absolute inset-0 z-0">
-           < img
+            <img
               src={donorBg}
               alt="Hero background"
               className="h-full w-full object-cover object-[center_65%]"
-           />
+            />
             <div className="absolute inset-0 bg-linear-to-r from-[#002a29]/90 via-[#002a29]/60 to-transparent"></div>
           </div>
 
@@ -122,7 +122,7 @@ export default function DonorDashboard() {
 
         {/* CONTENT */}
         <div className="relative z-20 -mt-10 px-8 py-8">
-          <div className="bg-white p-8 rounded-3xl shadow-lg">
+          <div className="bg-white/70 backdrop-blur-sm p-8 rounded-3xl shadow-lg">
             <h2 className="text-lg font-bold mb-6">Active Subscriptions</h2>
 
             <div className="grid md:grid-cols-3 gap-4">
