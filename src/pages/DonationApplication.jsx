@@ -139,6 +139,8 @@ const DonationApplication = () => {
           ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
         },
       });
+  // DEBUG: log URL and payload for troubleshooting
+  console.log('POST to', `${BASE_URL}/donationForms`, payload);
 
       setMessage("Donation application submitted successfully.");
       setError("");
@@ -161,10 +163,9 @@ const DonationApplication = () => {
       // log detailed error for debugging
       console.error('Donation submit error', err);
       console.error('Server response:', err.response?.data);
-
-      setError(
-        err.response?.data?.message || err.message || "Failed to submit donation application."
-      );
+  const status = err.response?.status
+  const serverMsg = err.response?.data?.message || err.response?.data?.errorMessage
+  setError(serverMsg || (status ? `Request failed with status code ${status}` : err.message) || "Failed to submit donation application.")
       setMessage("");
     }
   };

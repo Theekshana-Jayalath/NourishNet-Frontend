@@ -67,7 +67,7 @@ export default function DonorHistory() {
         const items = data.data || []
         const myReceived = items.filter((f) => {
           const formDonorId = (f.donorId && (f.donorId._id || f.donorId)) || f.donorId
-          return String(formDonorId) === String(userId) && f.Status === 'Received'
+          return String(formDonorId) === String(userId) // keep all statuses so pending appears immediately
         })
 
         // sort newest first
