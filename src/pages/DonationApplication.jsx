@@ -1,7 +1,13 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+<<<<<<< HEAD
 import { getToken, getUser, BASE_URL } from "../api";
 
+=======
+import { getToken, BASE_URL } from "../api.js";
+
+// Must match backend allowed product IDs (see DonationFormModel.js)
+>>>>>>> c1a1f31ae22484f28f2c9a62009fa6da980562a6
 const UNPROCESSED_PRODUCTS = [
   { productId: "UNP001", label: "Rice" },
   { productId: "UNP002", label: "Dhal" },
@@ -39,8 +45,17 @@ const DonationApplication = () => {
   const [error, setError] = useState("");
 
   useEffect(() => {
+<<<<<<< HEAD
     const u = getUser();
     if (u && Object.keys(u).length) setLoggedUser(u);
+=======
+    const storedUser = localStorage.getItem("user");
+
+    if (storedUser) {
+      const parsedUser = JSON.parse(storedUser);
+      setLoggedUser(parsedUser);
+    }
+>>>>>>> c1a1f31ae22484f28f2c9a62009fa6da980562a6
   }, []);
 
   const getProductsByType = (processingType) => {
@@ -102,11 +117,29 @@ const DonationApplication = () => {
       return;
     }
 
+<<<<<<< HEAD
     try {
       // derive donor id from logged user persisted by the backend at login
       const donorId =
         loggedUser?._id || loggedUser?.id || loggedUser?.userId || null;
 
+=======
+    // client-side validation: ensure each item has a selected productId
+    const invalidItem = formData.items.find((it) => !it.productId || it.productId === "");
+    if (invalidItem) {
+      setError("Please select a product for each item before submitting.");
+      return;
+    }
+
+    try {
+      // include donorId required by backend (use _id or id from loggedUser)
+  const donorId = loggedUser._id || loggedUser.id;
+
+  if (!donorId) {
+    setError("Unable to determine donor id from logged user.");
+    return;
+  }
+>>>>>>> c1a1f31ae22484f28f2c9a62009fa6da980562a6
       const payload = {
         donorId,
         items: formData.items.map((item) => ({
@@ -119,10 +152,17 @@ const DonationApplication = () => {
         })),
       };
 
+<<<<<<< HEAD
       const token = getToken();
 
       const response = await axios.post(`${BASE_URL}/donationForms`, payload, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
+=======
+      const response = await axios.post(`${BASE_URL}/donationForms`, payload, {
+        headers: {
+          ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
+        },
+>>>>>>> c1a1f31ae22484f28f2c9a62009fa6da980562a6
       });
 
       setMessage("Donation application submitted successfully.");
@@ -143,8 +183,17 @@ const DonationApplication = () => {
 
       console.log(response.data);
     } catch (err) {
+<<<<<<< HEAD
       setError(
         err.response?.data?.message || "Failed to submit donation application."
+=======
+      // log detailed error for debugging
+      console.error('Donation submit error', err);
+      console.error('Server response:', err.response?.data);
+
+      setError(
+        err.response?.data?.message || err.message || "Failed to submit donation application."
+>>>>>>> c1a1f31ae22484f28f2c9a62009fa6da980562a6
       );
       setMessage("");
     }
@@ -162,7 +211,11 @@ const DonationApplication = () => {
           
         </div>
 
+<<<<<<< HEAD
   {/* Donor information intentionally hidden */}
+=======
+  {/* profile details intentionally hidden per request */}
+>>>>>>> c1a1f31ae22484f28f2c9a62009fa6da980562a6
 
         <form onSubmit={handleSubmit} style={styles.form}>
           <div style={styles.sectionHeader}>
@@ -220,8 +273,13 @@ const DonationApplication = () => {
                   >
                     <option value="">Select Product</option>
                     {getProductsByType(item.processingType).map((product) => (
+<<<<<<< HEAD
                       <option key={product.productId} value={product.productId}>
                         {product.label} ({product.productId})
+=======
+                      <option key={product.productId || product.label} value={product.productId || product.label}>
+                        {product.label}{product.productId ? ` (${product.productId})` : ''}
+>>>>>>> c1a1f31ae22484f28f2c9a62009fa6da980562a6
                       </option>
                     ))}
                   </select>
