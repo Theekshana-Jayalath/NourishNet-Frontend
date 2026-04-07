@@ -46,7 +46,7 @@ const Login = () => {
         return
       }
 
-  const token = data.token
+      const token = data.token
   if (!token) {
         setError('Invalid server response')
         setLoading(false)
@@ -54,6 +54,11 @@ const Login = () => {
       }
       // persist token for authenticated API calls (DashboardHome reads this)
       try { localStorage.setItem('token', token) } catch (_) {}
+
+      // Persist full user object returned from backend so other pages can read id/name/role
+      if (data.user) {
+        try { localStorage.setItem('user', JSON.stringify(data.user)) } catch (_) {}
+      }
 
       const serverRole = (data.role || '').toString().toLowerCase()
       const fallbackTokenRole = (() => {
