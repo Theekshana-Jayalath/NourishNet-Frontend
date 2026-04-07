@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+<<<<<<< HEAD
 import { getToken, getUser, BASE_URL } from "../api";
+=======
+import { getToken, BASE_URL } from "../api.js";
+
+// Must match backend allowed product IDs (see DonationFormModel.js)
+>>>>>>> e4f7935f24c9444ec59f6aba385858ca0fd830ed
 
 const UNPROCESSED_PRODUCTS = [
   { productId: "UNP001", label: "Rice" },
@@ -39,8 +45,17 @@ const DonationApplication = () => {
   const [error, setError] = useState("");
 
   useEffect(() => {
+<<<<<<< HEAD
     const u = getUser();
     if (u && Object.keys(u).length) setLoggedUser(u);
+=======
+    const storedUser = localStorage.getItem("user");
+
+    if (storedUser) {
+      const parsedUser = JSON.parse(storedUser);
+      setLoggedUser(parsedUser);
+    }
+>>>>>>> e4f7935f24c9444ec59f6aba385858ca0fd830ed
   }, []);
 
   const getProductsByType = (processingType) => {
@@ -102,10 +117,29 @@ const DonationApplication = () => {
       return;
     }
 
+<<<<<<< HEAD
     try {
       // derive donor id from logged user persisted by the backend at login
       const donorId =
         loggedUser?._id || loggedUser?.id || loggedUser?.userId || null;
+=======
+    // validate product selection
+    const invalidItem = formData.items.find(
+      (it) => !it.productId || it.productId === ""
+    );
+    if (invalidItem) {
+      setError("Please select a product for each item before submitting.");
+      return;
+    }
+
+    try {
+      const donorId = loggedUser._id || loggedUser.id;
+
+      if (!donorId) {
+        setError("Unable to determine donor id from logged user.");
+        return;
+      }
+>>>>>>> e4f7935f24c9444ec59f6aba385858ca0fd830ed
 
       const payload = {
         donorId,
@@ -119,11 +153,27 @@ const DonationApplication = () => {
         })),
       };
 
+<<<<<<< HEAD
       const token = getToken();
 
       const response = await axios.post(`${BASE_URL}/donationForms`, payload, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
+=======
+      const response = await axios.post(
+        `${BASE_URL}/donationForms`,
+        payload,
+        {
+          headers: {
+            ...(getToken()
+              ? { Authorization: `Bearer ${getToken()}` }
+              : {}),
+          },
+        }
+      );
+
+      console.log("POST to", `${BASE_URL}/donationForms`, payload);
+>>>>>>> e4f7935f24c9444ec59f6aba385858ca0fd830ed
 
       setMessage("Donation application submitted successfully.");
       setError("");
@@ -143,13 +193,24 @@ const DonationApplication = () => {
 
       console.log(response.data);
     } catch (err) {
+<<<<<<< HEAD
       setError(
         err.response?.data?.message || "Failed to submit donation application."
+=======
+      console.error("Donation submit error", err);
+      console.error("Server response:", err.response?.data);
+
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to submit donation application."
+>>>>>>> e4f7935f24c9444ec59f6aba385858ca0fd830ed
       );
       setMessage("");
     }
   };
 
+<<<<<<< HEAD
   return (
     <div style={styles.page}>
       <div style={styles.backgroundGlowOne}></div>
@@ -638,3 +699,9 @@ const styles = {
     textAlign: "center",
   },
 };
+=======
+  return <div>/* UI remains same */</div>;
+};
+
+export default DonationApplication;
+>>>>>>> e4f7935f24c9444ec59f6aba385858ca0fd830ed
