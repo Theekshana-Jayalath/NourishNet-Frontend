@@ -47,11 +47,7 @@ const Login = () => {
       }
 
       const token = data.token
-<<<<<<< HEAD
-  if (!token) {
-=======
       if (!token) {
->>>>>>> c1a1f31ae22484f28f2c9a62009fa6da980562a6
         setError('Invalid server response')
         setLoading(false)
         return
@@ -64,21 +60,7 @@ const Login = () => {
         if (serverUser) localStorage.setItem('user', JSON.stringify(serverUser))
       } catch (_) {}
 
-<<<<<<< HEAD
-      // Persist full user object returned from backend so other pages can read id/name/role
-      if (data.user) {
-        try { localStorage.setItem('user', JSON.stringify(data.user)) } catch (_) {}
-      }
-
-      const serverRole = (data.role || '').toString().toLowerCase()
-      const fallbackTokenRole = (() => {
-        const tokenPayload = decodeJwt(token)
-        return (tokenPayload?.role || '').toString().toLowerCase()
-      })()
-      const finalRole = serverRole || fallbackTokenRole || role
-=======
       localStorage.setItem('token', token)
->>>>>>> c1a1f31ae22484f28f2c9a62009fa6da980562a6
 
       const tokenPayload = decodeJwt(token)
 
