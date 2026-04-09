@@ -55,6 +55,15 @@ const AdminDashboard = () => {
               Users
             </NavLink>
 
+            <NavLink to='/admin-dashboard/drivers'
+              className={({isActive}) =>
+              `block px-4 py-2 rounded-lg transition
+              ${isActive ? 'bg-white/20 text-white font-semibold'
+              : 'text-white/90 hover:bg-white/10'}`
+            }>
+              Drivers
+            </NavLink>
+
             <NavLink to='/admin-dashboard/inventory'
               className={({isActive}) =>
               `block px-4 py-2 rounded-lg transition
