@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { welcome } from '../assets/assets'
+import { BASE_URL } from '../api'
 
 // Minimal JWT decode (no verification)
 const decodeJwt = (token) => {
@@ -27,8 +28,8 @@ const Login = () => {
     setLoading(true)
 
     try {
-      const base = import.meta.env.VITE_API_URL
-      const url = base ? `${base}/api/auth/login` : '/api/auth/login'
+  // Use centralized BASE_URL (includes /api) to ensure requests hit the backend
+  const url = `${BASE_URL}/auth/login`
       const payload = { username, password }
 
       const res = await fetch(url, {
@@ -51,6 +52,13 @@ const Login = () => {
         setLoading(false)
         return
       }
+      // persist token for authenticated API calls (DashboardHome reads this)
+      try { localStorage.setItem('token', token) } catch (_) {}
+      // persist full user object returned by server when available
+      try {
+        const serverUser = data.user || (data.userId ? { _id: data.userId, role: data.role } : null)
+        if (serverUser) localStorage.setItem('user', JSON.stringify(serverUser))
+      } catch (_) {}
 
       localStorage.setItem('token', token)
 
@@ -162,6 +170,32 @@ const Login = () => {
     }
   }
 
+  // DEBUG helper: test backend connectivity and show detailed errors in console
+  const testBackend = async () => {
+    try {
+      console.log('Testing backend with BASE_URL =', BASE_URL)
+      const url = `${BASE_URL}/auth/login`
+      console.log('Test POST ->', url)
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: 'test', password: 'x' })
+      })
+
+      console.log('Test response status:', res.status)
+      const text = await res.text().catch(() => '')
+      try {
+        console.log('Test response json:', JSON.parse(text || '{}'))
+      } catch {
+        console.log('Test response text:', text)
+      }
+    } catch (err) {
+      console.error('Test backend error:', err)
+      // show user a short message while details are in console
+      alert('Backend test failed; check console for details')
+    }
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-teal-200 via-white to-teal-400 px-4">
       <div className="w-full max-w-6xl grid md:grid-cols-2 rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] overflow-hidden bg-white">
@@ -238,6 +272,9 @@ const Login = () => {
             >
               {loading ? "Signing in..." : "Sign In"}
             </button>
+            <div className="mt-3 text-center">
+              <button type="button" onClick={testBackend} className="text-sm text-gray-500 underline">Check backend</button>
+            </div>
           </form>
 
           <p className="text-center text-sm text-gray-500 mt-6">
