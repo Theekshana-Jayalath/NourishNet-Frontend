@@ -9,7 +9,8 @@ import Managers from './pages/admin/Managers'
 import Users from './pages/admin/Users'
 import Applications from './pages/admin/Applications'
 import DashboardHome from './pages/admin/DashboardHome'
-// import ManagerDashboard from './pages/ManagerDashboard'
+import Drivers from './pages/admin/Drivers'
+import ManagerDashboard from './pages/ManagerDashboard'
 import DonorDashboard from './pages/DonorDashboard'
 import NgoDashboard from './pages/NgoDashboard'
 import DriverDashboard from './pages/DriverDashboard'
@@ -27,7 +28,7 @@ function Main() {
   
   // routes where we don't want to show the global footer
   const hideFooterPaths = [
-    // '/manager-dashboard',
+    '/manager-dashboard',
     '/donor-dashboard',
     '/ngo-dashboard',
     '/driver-dashboard',
@@ -50,17 +51,19 @@ function Main() {
           <Route index element={<DashboardHome />} />
           <Route path='managers' element={<Managers />} />
           <Route path='users' element={<Users />} />
+          <Route path='drivers' element={<Drivers />} />
           <Route path='inventory' element={<div className='p-6'>Inventory management coming soon.</div>} />
           <Route path='applications' element={<Applications />} />
         </Route>
-            {/* <Route path='/manager-dashboard' element={<ManagerDashboard />} /> */}
+            {/* Uncommented: Manager Dashboard */}
+            <Route path='/manager-dashboard' element={<ManagerDashboard />} />
             <Route path='/donor-dashboard' element={<DonorDashboard />} />
             <Route path='/ngo-dashboard' element={<NgoDashboard />} />
             <Route path='/driver-dashboard' element={<DriverDashboard />} />
             {/* manager-specific named routes (Login redirects here) */}
             <Route path='/ngo-manager-dashboard' element={<NgoDashboard />} />
             {/* Removed DonorManagerDashboard route */}
-            <Route path='/driver-manager-dashboard' element={<DriverDashboard />} />
+            <Route path='/driver-manager-dashboard' element={<ManagerDashboard />} />
       </Routes>
       
       {!shouldHideFooter && <Footer />}

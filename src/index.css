@@ -1,3 +1,12 @@
 @import "tailwindcss";
 
+@theme {
+  /* Client's custom Teal palette for the Delivery module */
+  --color-teal-300: #96ded1;
+  --color-teal-500: #66ada4;
+  --color-teal-700: #317873;
+  --color-teal-900: #004b49;
+  --color-teal-950: #002a29;
+}
+
 html { scroll-behavior: smooth; }
