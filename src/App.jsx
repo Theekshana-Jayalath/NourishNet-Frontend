@@ -11,9 +11,9 @@ import Applications from './pages/admin/Applications'
 import DashboardHome from './pages/admin/DashboardHome'
 // import ManagerDashboard from './pages/ManagerDashboard'
 import DonorDashboard from './pages/DonorDashboard'
-import NgoDashboard from './pages/NgoDashboard'
+import NgoDashboard from './pages/ngoUser/NgoDashboard'
 import DriverDashboard from './pages/DriverDashboard'
-import NgoManagerDashboard from './pages/NgoManagerDashboard'
+import NgoManagerDashboard from './pages/ngoManager/NgoManagerDashboard'
 
 const App = () => {
   return (
@@ -25,7 +25,7 @@ const App = () => {
 
 function Main() {
   const location = useLocation()
-  
+
   // routes where we don't want to show the global footer
   const hideFooterPaths = [
     // '/manager-dashboard',
@@ -37,7 +37,9 @@ function Main() {
     '/driver-manager-dashboard'
   ]
 
-  const shouldHideFooter = hideFooterPaths.some(p => location.pathname.startsWith(p))
+  const shouldHideFooter = hideFooterPaths.some((p) =>
+    location.pathname.startsWith(p)
+  )
 
   return (
     <>
@@ -45,25 +47,31 @@ function Main() {
         <Route path='/' element={<Header />} />
         <Route path='/apply' element={<Apply />} />
         <Route path='/login' element={<Login />} />
-        
+
         {/* Admin Dashboard */}
         <Route path='/admin-dashboard/*' element={<AdminDashboard />}>
           <Route index element={<DashboardHome />} />
           <Route path='managers' element={<Managers />} />
           <Route path='users' element={<Users />} />
-          <Route path='inventory' element={<div className='p-6'>Inventory management coming soon.</div>} />
+          <Route
+            path='inventory'
+            element={<div className='p-6'>Inventory management coming soon.</div>}
+          />
           <Route path='applications' element={<Applications />} />
         </Route>
-            {/* <Route path='/manager-dashboard' element={<ManagerDashboard />} /> */}
-            <Route path='/donor-dashboard' element={<DonorDashboard />} />
-            <Route path='/ngo-dashboard' element={<NgoDashboard />} />
-            <Route path='/driver-dashboard' element={<DriverDashboard />} />
-            {/* manager-specific named routes (Login redirects here) */}
-            <Route path='/ngo-manager-dashboard' element={<NgoManagerDashboard />} />
-            {/* Removed DonorManagerDashboard route */}
-            <Route path='/driver-manager-dashboard' element={<DriverDashboard />} />
+
+        {/* <Route path='/manager-dashboard' element={<ManagerDashboard />} /> */}
+        <Route path='/donor-dashboard' element={<DonorDashboard />} />
+        <Route path='/ngo-dashboard' element={<NgoDashboard />} />
+        <Route path='/driver-dashboard' element={<DriverDashboard />} />
+
+        {/* manager-specific named routes (Login redirects here) */}
+        <Route path='/ngo-manager-dashboard' element={<NgoManagerDashboard />} />
+
+        {/* Removed DonorManagerDashboard route */}
+        <Route path='/driver-manager-dashboard' element={<DriverDashboard />} />
       </Routes>
-      
+
       {!shouldHideFooter && <Footer />}
     </>
   )
