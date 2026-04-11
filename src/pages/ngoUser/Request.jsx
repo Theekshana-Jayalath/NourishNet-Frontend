@@ -1,8 +1,21 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { format } from "date-fns";
+import { DayPicker } from "react-day-picker";
+import "react-day-picker/dist/style.css";
 import { createRequest, getUser } from "../../api";
+import FoodItemsBoard from "../FoodItemBoard";
 
 export default function Request({ showToast, setActiveTab }) {
   const user = getUser();
+
+  const getTomorrowDate = () => {
+    const tomorrow = new Date();
+    tomorrow.setHours(0, 0, 0, 0);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow;
+  };
+
+  const tomorrowDate = getTomorrowDate();
 
   const [form, setForm] = useState({
     organizationName: user?.organizationName || user?.name || user?.username || "",
@@ -18,6 +31,31 @@ export default function Request({ showToast, setActiveTab }) {
 
   const [dietInput, setDietInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+
+  const calendarRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (calendarRef.current && !calendarRef.current.contains(event.target)) {
+        setCalendarOpen(false);
+      }
+    };
+
+    if (calendarOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [calendarOpen]);
+
+  const selectedNeededBeforeDate = useMemo(() => {
+    if (!form.neededBefore) return undefined;
+    const parsed = new Date(form.neededBefore);
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+  }, [form.neededBefore]);
 
   const itemCount = useMemo(
     () => form.requestedItems.filter((item) => item.itemName.trim()).length,
@@ -88,8 +126,111 @@ export default function Request({ showToast, setActiveTab }) {
     }));
   };
 
+  const handleContactPhoneChange = (e) => {
+    const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 10);
+    updateField("contactPhone", digitsOnly);
+  };
+
+  const handlePeopleCountChange = (e) => {
+    const value = e.target.value.replace(/\D/g, "");
+
+    if (value === "") {
+      updateField("peopleCount", "");
+      return;
+    }
+
+    const numericValue = Number(value);
+
+    if (numericValue <= 0) {
+      updateField("peopleCount", "");
+      return;
+    }
+
+    updateField("peopleCount", value);
+  };
+
+  const blockNonNumericKeys = (e) => {
+    const allowedKeys = [
+      "Backspace",
+      "Delete",
+      "Tab",
+      "ArrowLeft",
+      "ArrowRight",
+      "Home",
+      "End",
+    ];
+
+    if (allowedKeys.includes(e.key) || e.ctrlKey || e.metaKey) return;
+
+    if (!/^\d$/.test(e.key)) {
+      e.preventDefault();
+    }
+  };
+
+  const blockInvalidPeopleCountKeys = (e) => {
+    const allowedKeys = [
+      "Backspace",
+      "Delete",
+      "Tab",
+      "ArrowLeft",
+      "ArrowRight",
+      "Home",
+      "End",
+    ];
+
+    if (allowedKeys.includes(e.key) || e.ctrlKey || e.metaKey) return;
+
+    if (!/^\d$/.test(e.key)) {
+      e.preventDefault();
+      return;
+    }
+
+    const currentValue = e.currentTarget.value;
+    const selectionStart = e.currentTarget.selectionStart ?? currentValue.length;
+    const selectionEnd = e.currentTarget.selectionEnd ?? currentValue.length;
+
+    const nextValue =
+      currentValue.slice(0, selectionStart) +
+      e.key +
+      currentValue.slice(selectionEnd);
+
+    if (Number(nextValue) <= 0) {
+      e.preventDefault();
+    }
+  };
+
+  const handleSubmitValidation = () => {
+    if (!/^\d{10}$/.test(form.contactPhone)) {
+      showToast("Contact phone must contain exactly 10 numbers", "error");
+      return false;
+    }
+
+    if (!form.peopleCount || Number(form.peopleCount) <= 0) {
+      showToast("People count must be a positive number greater than 0", "error");
+      return false;
+    }
+
+    if (!form.neededBefore) {
+      showToast("Please select a needed before date", "error");
+      return false;
+    }
+
+    const selectedDate = new Date(form.neededBefore);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (selectedDate <= today) {
+      showToast("Needed before must be a future date", "error");
+      return false;
+    }
+
+    return true;
+  };
+
   const submit = async (e) => {
     e.preventDefault();
+
+    if (!handleSubmitValidation()) return;
 
     try {
       setSubmitting(true);
@@ -130,6 +271,7 @@ export default function Request({ showToast, setActiveTab }) {
         notes: "",
       });
 
+      setCalendarOpen(false);
       setTimeout(() => setActiveTab("history"), 700);
     } catch (error) {
       showToast(error.message, "error");
@@ -140,6 +282,10 @@ export default function Request({ showToast, setActiveTab }) {
 
   return (
     <div>
+      <div className="mb-8">
+        <FoodItemsBoard />
+      </div>
+
       <div className="mb-10">
         <h2 className="text-4xl font-extrabold tracking-tight text-[#003331]">
           Initialize Resource Request
@@ -170,14 +316,21 @@ export default function Request({ showToast, setActiveTab }) {
               <Input
                 label="Contact Phone"
                 value={form.contactPhone}
-                onChange={(e) => updateField("contactPhone", e.target.value)}
+                onChange={handleContactPhoneChange}
+                onKeyDown={blockNonNumericKeys}
+                inputMode="numeric"
+                maxLength={10}
+                placeholder="Enter 10-digit number"
               />
 
               <Input
                 label="People Count"
-                type="number"
+                type="text"
                 value={form.peopleCount}
-                onChange={(e) => updateField("peopleCount", e.target.value)}
+                onChange={handlePeopleCountChange}
+                onKeyDown={blockInvalidPeopleCountKeys}
+                inputMode="numeric"
+                placeholder="Enter people count"
               />
 
               <Select
@@ -187,12 +340,67 @@ export default function Request({ showToast, setActiveTab }) {
                 options={["LOW", "MEDIUM", "HIGH"]}
               />
 
-              <Input
-                label="Needed Before"
-                type="date"
-                value={form.neededBefore}
-                onChange={(e) => updateField("neededBefore", e.target.value)}
-              />
+              <div className="relative" ref={calendarRef}>
+                <label className="mb-2 block text-xs font-extrabold uppercase tracking-[0.18em] text-[#3f4948]">
+                  Needed Before
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() => setCalendarOpen((prev) => !prev)}
+                  className="flex w-full items-center justify-between rounded-full border-none bg-[#e4e9e9] px-5 py-4 text-left text-lg text-[#171d1d] outline-none ring-0 focus:ring-2 focus:ring-[#003331]/20"
+                >
+                  <span>
+                    {form.neededBefore
+                      ? format(new Date(form.neededBefore), "MM / dd / yyyy")
+                      : "mm / dd / yyyy"}
+                  </span>
+                  <span className="material-symbols-outlined text-[#707978]">
+                    calendar_today
+                  </span>
+                </button>
+
+                {calendarOpen && (
+                  <div className="absolute left-0 top-[calc(100%+12px)] z-50 rounded-[24px] bg-[#2a2a38] p-4 shadow-2xl">
+                    <DayPicker
+                      mode="single"
+                      selected={selectedNeededBeforeDate}
+                      onSelect={(date) => {
+                        if (!date) return;
+                        updateField("neededBefore", format(date, "yyyy-MM-dd"));
+                        setCalendarOpen(false);
+                      }}
+                      disabled={{ before: tomorrowDate }}
+                      showOutsideDays
+                      className="text-white"
+                      classNames={{
+                        months: "flex flex-col",
+                        month: "space-y-4",
+                        caption: "flex justify-center items-center relative mb-2",
+                        caption_label:
+                          "text-white text-lg font-semibold",
+                        nav: "flex items-center gap-2",
+                        nav_button:
+                          "h-8 w-8 bg-transparent text-white hover:bg-white/10 rounded-md",
+                        table: "w-full border-collapse",
+                        head_row: "flex",
+                        head_cell:
+                          "w-10 h-10 text-sm font-medium text-slate-300 flex items-center justify-center",
+                        row: "flex w-full",
+                        cell: "h-10 w-10 text-center text-sm p-0 relative",
+                        day: "h-10 w-10 rounded-xl text-sm font-medium text-white hover:bg-cyan-500/20 transition",
+                        day_selected:
+                          "bg-cyan-500 text-white ring-2 ring-cyan-400",
+                        day_today:
+                          "border border-cyan-400 text-cyan-300",
+                        day_outside: "text-slate-500",
+                        day_disabled:
+                          "text-slate-600 opacity-30 cursor-not-allowed hover:bg-transparent",
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
 
               <div className="md:col-span-2">
                 <TextArea
