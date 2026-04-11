@@ -34,7 +34,9 @@ const fetchStats = async () => {
     const res = await fetch("/api/admin/stats",{headers})
     if(!res.ok) return
     const data = await res.json()
-    setStats(data)
+    // support envelope { data: {...} } or direct object
+    const payload = data?.data || data || {}
+    setStats(payload)
   }catch(err){}
 }
 
