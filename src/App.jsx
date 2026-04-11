@@ -10,13 +10,15 @@ import Users from './pages/admin/Users'
 import Applications from './pages/admin/Applications'
 import Inventory from './pages/admin/Inventory'
 import DashboardHome from './pages/admin/DashboardHome'
-// import ManagerDashboard from './pages/ManagerDashboard'
+import ManagerDashboard from './pages/ManagerDashboard'
 import DonorDashboard from './pages/DonorDashboard'
 import NgoDashboard from './pages/ngoUser/NgoDashboard'
 import DriverDashboard from './pages/DriverDashboard'
 import DonationApplication from './pages/DonationApplication'
 import DonorHistory from './pages/DonorHistory'
 import DonorProfile from './pages/DonorProfile'
+import Drivers from './pages/admin/Drivers'
+
 const App = () => {
   return (
     <BrowserRouter>
@@ -30,7 +32,7 @@ function Main() {
   
   // routes where we don't want to show the global footer
   const hideFooterPaths = [
-    // '/manager-dashboard',
+    '/manager-dashboard',
     '/donor-dashboard',
     '/ngo-dashboard',
     '/driver-dashboard',
@@ -53,10 +55,11 @@ function Main() {
           <Route index element={<DashboardHome />} />
           <Route path='managers' element={<Managers />} />
           <Route path='users' element={<Users />} />
+          <Route path='drivers' element={<Drivers />} />
           <Route path='inventory' element={<Inventory />} />
           <Route path='applications' element={<Applications />} />
         </Route>
-            {/* <Route path='/manager-dashboard' element={<ManagerDashboard />} /> */}
+            <Route path='/manager-dashboard' element={<ManagerDashboard />} /> 
             <Route path='/donor-dashboard' element={<DonorDashboard />} />
             <Route path='/donor-history' element={<DonorHistory />} />
             <Route path='/donor-profile' element={<DonorProfile />} />
