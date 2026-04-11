@@ -8,6 +8,7 @@ import AdminDashboard from './pages/AdminDashboard'
 import Managers from './pages/admin/Managers'
 import Users from './pages/admin/Users'
 import Applications from './pages/admin/Applications'
+import Inventory from './pages/admin/Inventory'
 import DashboardHome from './pages/admin/DashboardHome'
 // import ManagerDashboard from './pages/ManagerDashboard'
 import DonorDashboard from './pages/DonorDashboard'
@@ -50,7 +51,7 @@ function Main() {
           <Route index element={<DashboardHome />} />
           <Route path='managers' element={<Managers />} />
           <Route path='users' element={<Users />} />
-          <Route path='inventory' element={<div className='p-6'>Inventory management coming soon.</div>} />
+          <Route path='inventory' element={<Inventory />} />
           <Route path='applications' element={<Applications />} />
         </Route>
             {/* <Route path='/manager-dashboard' element={<ManagerDashboard />} /> */}
