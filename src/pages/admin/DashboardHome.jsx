@@ -31,12 +31,23 @@ const DashboardHome = () => {
 /* ---------- FETCH STATS ---------- */
 const fetchStats = async () => {
   try{
+    console.log('[DashboardHome] fetching /api/admin/stats')
     const res = await fetch("/api/admin/stats",{headers})
-    if(!res.ok) return
+    if(!res.ok){
+      console.error('[DashboardHome] /api/admin/stats returned', res.status, await res.text())
+      return
+    }
     const data = await res.json()
+    console.log('[DashboardHome] /api/admin/stats response', data)
     // support envelope { data: {...} } or direct object
     const payload = data?.data || data || {}
-    setStats(payload)
+    // Ensure numeric values and fallback to 0
+    setStats({
+      managers: Number(payload.managers) || 0,
+      donors: Number(payload.donors) || 0,
+      ngos: Number(payload.ngos) || 0,
+      drivers: Number(payload.drivers) || 0,
+    })
   }catch(err){}
 }
 
