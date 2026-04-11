@@ -5,9 +5,15 @@ export default function RequestProfile({ showToast }) {
   const user = getUser();
 
   const [profile, setProfile] = useState({
-    username: user?.username || user?.name || "NGO User",
-    email: user?.email || "No email found",
+    username: user?.username || user?.name || "",
+    email: user?.email || "",
     role: user?.role || "ngo",
+    nic: user?.nic || "",
+    address: user?.address || "",
+    city: user?.city || "",
+    organizationName: user?.organizationName || "",
+    registrationNumber: user?.registrationNumber || "",
+    contactNumber: user?.contactNumber || user?.contact || "",
   });
 
   const [requests, setRequests] = useState([]);
@@ -39,7 +45,23 @@ export default function RequestProfile({ showToast }) {
   }, [requests]);
 
   const saveProfile = () => {
-    localStorage.setItem("user", JSON.stringify(profile));
+    localStorage.setItem(
+      "user",
+      JSON.stringify({
+        ...getUser(),
+        username: profile.username,
+        name: profile.username,
+        email: profile.email,
+        role: profile.role,
+        nic: profile.nic,
+        address: profile.address,
+        city: profile.city,
+        organizationName: profile.organizationName,
+        registrationNumber: profile.registrationNumber,
+        contactNumber: profile.contactNumber,
+      })
+    );
+
     showToast("Profile saved successfully");
   };
 
@@ -48,20 +70,69 @@ export default function RequestProfile({ showToast }) {
       <div className="bg-white rounded-3xl shadow-lg p-6">
         <div className="flex items-center gap-4 mb-6">
           <div className="w-16 h-16 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center text-white text-2xl font-bold">
-            {profile.username.charAt(0).toUpperCase()}
+            {(profile.username || "N").charAt(0).toUpperCase()}
           </div>
           <div>
             <h2 className="text-xl font-bold text-slate-800">NGO Profile</h2>
-            <p className="text-slate-500">Manage your account</p>
+            <p className="text-slate-500">Manage your account and NGO details</p>
           </div>
         </div>
 
         <div className="space-y-4">
-          <Field label="Name" value={profile.username} onChange={(e) => setProfile({ ...profile, username: e.target.value })} />
-          <Field label="Email" value={profile.email} onChange={(e) => setProfile({ ...profile, email: e.target.value })} />
+          <Field
+            label="User Name"
+            value={profile.username}
+            onChange={(e) => setProfile({ ...profile, username: e.target.value })}
+          />
+
+          <Field
+            label="Email"
+            value={profile.email}
+            onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+          />
+
+          <Field
+            label="NIC"
+            value={profile.nic}
+            onChange={(e) => setProfile({ ...profile, nic: e.target.value })}
+          />
+
+          <Field
+            label="Address"
+            value={profile.address}
+            onChange={(e) => setProfile({ ...profile, address: e.target.value })}
+          />
+
+          <Field
+            label="City"
+            value={profile.city}
+            onChange={(e) => setProfile({ ...profile, city: e.target.value })}
+          />
+
+          <Field
+            label="Organization Name"
+            value={profile.organizationName}
+            onChange={(e) => setProfile({ ...profile, organizationName: e.target.value })}
+          />
+
+          <Field
+            label="Registration Number"
+            value={profile.registrationNumber}
+            onChange={(e) => setProfile({ ...profile, registrationNumber: e.target.value })}
+          />
+
+          <Field
+            label="Contact Number"
+            value={profile.contactNumber}
+            onChange={(e) => setProfile({ ...profile, contactNumber: e.target.value })}
+          />
+
           <Field label="Role" value={profile.role} disabled />
 
-          <button onClick={saveProfile} className="w-full rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-bold py-3 hover:opacity-90 transition">
+          <button
+            onClick={saveProfile}
+            className="w-full rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-bold py-3 hover:opacity-90 transition"
+          >
             Save Profile
           </button>
         </div>
@@ -94,7 +165,9 @@ function Field({ label, disabled, ...props }) {
       <input
         {...props}
         disabled={disabled}
-        className={`w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:ring-2 focus:ring-emerald-400 ${disabled ? "bg-slate-100 cursor-not-allowed" : ""}`}
+        className={`w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:ring-2 focus:ring-emerald-400 ${
+          disabled ? "bg-slate-100 cursor-not-allowed" : ""
+        }`}
       />
     </div>
   );

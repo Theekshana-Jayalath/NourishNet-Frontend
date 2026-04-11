@@ -1,4 +1,17 @@
+<<<<<<< HEAD
 export const BASE_URL = "http://localhost:3000/api";
+=======
+<<<<<<< HEAD
+export const BASE_URL = "http://localhost:3000/api";
+=======
+<<<<<<< HEAD
+export const BASE_URL = "http://localhost:3000/api";
+=======
+export const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+
+>>>>>>> c1a1f31ae22484f28f2c9a62009fa6da980562a6
+>>>>>>> e4f7935f24c9444ec59f6aba385858ca0fd830ed
+>>>>>>> 8042ee97fabd67ba22d1d59bef88ac25d85d881e
 
 export function getToken() {
   return localStorage.getItem("token") || "";
