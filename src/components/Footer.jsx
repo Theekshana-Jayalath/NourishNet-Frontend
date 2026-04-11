@@ -1,16 +1,14 @@
 import React from "react";
+import { Link } from "react-router-dom";
 
 const Footer = () => {
   return (
-  <footer className="relative overflow-hidden bg-linear-to-br from-[#002a29] via-[#004b49] to-[#11776f] text-white">
-      {/* Background glow effects */}
+    <footer className="relative overflow-hidden bg-linear-to-br from-[#002a29] via-[#004b49] to-[#11776f] text-white">
       <div className="absolute top-0 left-0 w-72 h-72 bg-teal-400/10 rounded-full blur-3xl"></div>
       <div className="absolute bottom-0 right-0 w-80 h-80 bg-cyan-300/10 rounded-full blur-3xl"></div>
 
-  <div className="relative max-w-7xl mx-auto px-6 lg:px-10 py-6">
-        {/* Top section */}
+      <div className="relative max-w-7xl mx-auto px-6 lg:px-10 py-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {/* Brand */}
           <div className="lg:col-span-1">
             <div className="inline-flex items-center gap-3 mb-4">
               <div className="w-11 h-11 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 flex items-center justify-center shadow-lg">
@@ -57,60 +55,57 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* Quick Links */}
           <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-lg">
             <h5 className="text-lg font-semibold mb-4 text-teal-200">
               Quick Links
             </h5>
             <ul className="space-y-3 text-sm text-white/80">
               <li>
-                <a href="/" className="hover:text-white hover:translate-x-1 inline-block transition-all">
+                <Link to="/" className="hover:text-white hover:translate-x-1 inline-block transition-all">
                   Home
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/apply" className="hover:text-white hover:translate-x-1 inline-block transition-all">
+                <Link to="/apply" className="hover:text-white hover:translate-x-1 inline-block transition-all">
                   Join With Us
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/login" className="hover:text-white hover:translate-x-1 inline-block transition-all">
+                <Link to="/login" className="hover:text-white hover:translate-x-1 inline-block transition-all">
                   Sign In
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/contact" className="hover:text-white hover:translate-x-1 inline-block transition-all">
+                <Link to="/contact" className="hover:text-white hover:translate-x-1 inline-block transition-all">
                   Contact
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
 
-          {/* Resources */}
           <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-lg">
             <h5 className="text-lg font-semibold mb-4 text-teal-200">
               Resources
             </h5>
             <ul className="space-y-3 text-sm text-white/80">
               <li>
-                <a href="/about" className="hover:text-white hover:translate-x-1 inline-block transition-all">
+                <Link to="/about" className="hover:text-white hover:translate-x-1 inline-block transition-all">
                   About
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/privacy" className="hover:text-white hover:translate-x-1 inline-block transition-all">
+                <Link to="/privacy-policy" className="hover:text-white hover:translate-x-1 inline-block transition-all">
                   Privacy Policy
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/terms" className="hover:text-white hover:translate-x-1 inline-block transition-all">
+                <Link to="/terms-conditions" className="hover:text-white hover:translate-x-1 inline-block transition-all">
                   Terms & Conditions
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
 
-          {/* Contact / Newsletter */}
           <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-lg">
             <h5 className="text-lg font-semibold mb-4 text-teal-200">
               Stay Connected
@@ -144,10 +139,8 @@ const Footer = () => {
           </div>
         </div>
 
-  {/* Divider */}
-  <div className="my-2 h-px bg-white/4"></div>
+        <div className="my-2 h-px bg-white/4"></div>
 
-        {/* Bottom bar */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-white/70">
           <p>© {new Date().getFullYear()} NourishNet. All rights reserved.</p>
           <p className="text-center">

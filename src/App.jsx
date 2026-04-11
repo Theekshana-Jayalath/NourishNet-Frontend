@@ -19,6 +19,9 @@ import DonorHistory from './pages/DonorHistory'
 import DonorProfile from './pages/DonorProfile'
 import Drivers from './pages/admin/Drivers'
 import NgoManagerDashboard from './pages/ngoManager/NgoManagerDashboard'
+import About from './pages/About'
+import PrivacyPolicy from './pages/PrivacyPolicy'
+import TermsConditions from './pages/TermsConditions'
 
 const App = () => {
   return (
@@ -55,6 +58,9 @@ function Main() {
         <Route path='/' element={<Header />} />
         <Route path='/apply' element={<Apply />} />
         <Route path='/login' element={<Login />} />
+        <Route path='/about' element={<About />} />
+        <Route path='/privacy-policy' element={<PrivacyPolicy />} />
+        <Route path='/terms-conditions' element={<TermsConditions />} />
 
         {/* Admin Dashboard */}
         <Route path='/admin-dashboard/*' element={<AdminDashboard />}>
