@@ -54,7 +54,7 @@ const FoodItemsBoard = () => {
   });
 
   return (
-    <div className="p-6 bg-teal-50 min-h-screen">
+    <div className="p-6 bg-teal-50 rounded-3xl shadow-lg">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-teal-900">
