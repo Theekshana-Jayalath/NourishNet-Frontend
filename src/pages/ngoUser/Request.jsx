@@ -17,6 +17,14 @@ export default function Request({ showToast, setActiveTab }) {
 
   const tomorrowDate = getTomorrowDate();
 
+  const emptyItem = {
+    itemName: "",
+    quantity: 1,
+    unit: "kg",
+    category: "",
+    maxAvailable: null,
+  };
+
   const [form, setForm] = useState({
     organizationName: user?.organizationName || user?.name || user?.username || "",
     contactPhone: user?.contactNumber || user?.contact || "",
@@ -24,7 +32,7 @@ export default function Request({ showToast, setActiveTab }) {
     urgencyLevel: "MEDIUM",
     neededBefore: "",
     location: { address: user?.address || "" },
-    requestedItems: [{ itemName: "", quantity: 1, unit: "kg", category: "" }],
+    requestedItems: [{ ...emptyItem }],
     dietaryNeeds: [],
     notes: "",
   });
@@ -68,6 +76,10 @@ export default function Request({ showToast, setActiveTab }) {
       .reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   }, [form.requestedItems]);
 
+  const selectedBoardItems = useMemo(() => {
+    return form.requestedItems.filter((item) => item.itemName.trim());
+  }, [form.requestedItems]);
+
   const updateField = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
@@ -82,7 +94,35 @@ export default function Request({ showToast, setActiveTab }) {
   const updateItem = (index, field, value) => {
     setForm((prev) => {
       const next = [...prev.requestedItems];
-      next[index] = { ...next[index], [field]: value };
+      const currentItem = next[index];
+
+      if (field === "quantity") {
+        const digitsOnly = String(value).replace(/\D/g, "");
+
+        if (digitsOnly === "") {
+          next[index] = { ...currentItem, quantity: "" };
+          return { ...prev, requestedItems: next };
+        }
+
+        let numericValue = Number(digitsOnly);
+
+        if (numericValue <= 0) {
+          numericValue = 1;
+        }
+
+        if (
+          currentItem.maxAvailable !== null &&
+          currentItem.maxAvailable !== undefined &&
+          numericValue > Number(currentItem.maxAvailable)
+        ) {
+          numericValue = Number(currentItem.maxAvailable);
+        }
+
+        next[index] = { ...currentItem, quantity: numericValue };
+        return { ...prev, requestedItems: next };
+      }
+
+      next[index] = { ...currentItem, [field]: value };
       return { ...prev, requestedItems: next };
     });
   };
@@ -90,18 +130,74 @@ export default function Request({ showToast, setActiveTab }) {
   const addItem = () => {
     setForm((prev) => ({
       ...prev,
-      requestedItems: [
-        ...prev.requestedItems,
-        { itemName: "", quantity: 1, unit: "kg", category: "" },
-      ],
+      requestedItems: [...prev.requestedItems, { ...emptyItem }],
     }));
   };
 
   const removeItem = (index) => {
-    setForm((prev) => ({
-      ...prev,
-      requestedItems: prev.requestedItems.filter((_, i) => i !== index),
-    }));
+    setForm((prev) => {
+      const remaining = prev.requestedItems.filter((_, i) => i !== index);
+      return {
+        ...prev,
+        requestedItems: remaining.length ? remaining : [{ ...emptyItem }],
+      };
+    });
+  };
+
+  const handleBoardItemSelect = (selectedItem) => {
+    const availableQuantity = Number(
+      selectedItem.maxAvailable ?? selectedItem.quantity ?? 0
+    );
+    const selectedQuantity = Number(selectedItem.quantity || 1);
+
+    if (availableQuantity <= 0) {
+      showToast("This item is out of stock", "error");
+      return;
+    }
+
+    setForm((prev) => {
+      const next = [...prev.requestedItems];
+
+      const existingIndex = next.findIndex(
+        (item) =>
+          item.itemName.trim().toLowerCase() === selectedItem.name.trim().toLowerCase()
+      );
+
+      if (existingIndex !== -1) {
+        next[existingIndex] = {
+          ...next[existingIndex],
+          itemName: selectedItem.name,
+          unit: selectedItem.unit,
+          category: selectedItem.type || next[existingIndex].category,
+          maxAvailable: availableQuantity,
+          quantity: Math.min(selectedQuantity, availableQuantity),
+        };
+
+        return { ...prev, requestedItems: next };
+      }
+
+      const firstEmptyIndex = next.findIndex((item) => !item.itemName.trim());
+
+      const newItem = {
+        itemName: selectedItem.name,
+        quantity: Math.min(selectedQuantity, availableQuantity),
+        unit: selectedItem.unit,
+        category: selectedItem.type || "",
+        maxAvailable: availableQuantity,
+      };
+
+      if (firstEmptyIndex !== -1) {
+        next[firstEmptyIndex] = newItem;
+        return { ...prev, requestedItems: next };
+      }
+
+      return {
+        ...prev,
+        requestedItems: [...next, newItem],
+      };
+    });
+
+    showToast(`${selectedItem.name} added to Resource Catalog`);
   };
 
   const addDiet = () => {
@@ -199,6 +295,24 @@ export default function Request({ showToast, setActiveTab }) {
     }
   };
 
+  const blockInvalidQuantityKeys = (e) => {
+    const allowedKeys = [
+      "Backspace",
+      "Delete",
+      "Tab",
+      "ArrowLeft",
+      "ArrowRight",
+      "Home",
+      "End",
+    ];
+
+    if (allowedKeys.includes(e.key) || e.ctrlKey || e.metaKey) return;
+
+    if (!/^\d$/.test(e.key)) {
+      e.preventDefault();
+    }
+  };
+
   const handleSubmitValidation = () => {
     if (!/^\d{10}$/.test(form.contactPhone)) {
       showToast("Contact phone must contain exactly 10 numbers", "error");
@@ -221,6 +335,28 @@ export default function Request({ showToast, setActiveTab }) {
 
     if (selectedDate <= today) {
       showToast("Needed before must be a future date", "error");
+      return false;
+    }
+
+    const invalidQuantityItem = form.requestedItems.find((item) => {
+      if (!item.itemName.trim()) return false;
+      const quantity = Number(item.quantity);
+      if (!quantity || quantity <= 0) return true;
+      if (
+        item.maxAvailable !== null &&
+        item.maxAvailable !== undefined &&
+        quantity > Number(item.maxAvailable)
+      ) {
+        return true;
+      }
+      return false;
+    });
+
+    if (invalidQuantityItem) {
+      showToast(
+        `Quantity for ${invalidQuantityItem.itemName} cannot exceed available stock`,
+        "error"
+      );
       return false;
     }
 
@@ -266,7 +402,7 @@ export default function Request({ showToast, setActiveTab }) {
         urgencyLevel: "MEDIUM",
         neededBefore: "",
         location: { address: user?.address || "" },
-        requestedItems: [{ itemName: "", quantity: 1, unit: "kg", category: "" }],
+        requestedItems: [{ ...emptyItem }],
         dietaryNeeds: [],
         notes: "",
       });
@@ -283,7 +419,10 @@ export default function Request({ showToast, setActiveTab }) {
   return (
     <div>
       <div className="mb-8">
-        <FoodItemsBoard />
+        <FoodItemsBoard
+          onSelectItem={handleBoardItemSelect}
+          selectedItems={selectedBoardItems}
+        />
       </div>
 
       <div className="mb-10">
@@ -310,7 +449,8 @@ export default function Request({ showToast, setActiveTab }) {
               <Input
                 label="Organization Name"
                 value={form.organizationName}
-                onChange={(e) => updateField("organizationName", e.target.value)}
+                readOnly
+                disabled
               />
 
               <Input
@@ -377,8 +517,7 @@ export default function Request({ showToast, setActiveTab }) {
                         months: "flex flex-col",
                         month: "space-y-4",
                         caption: "flex justify-center items-center relative mb-2",
-                        caption_label:
-                          "text-white text-lg font-semibold",
+                        caption_label: "text-white text-lg font-semibold",
                         nav: "flex items-center gap-2",
                         nav_button:
                           "h-8 w-8 bg-transparent text-white hover:bg-white/10 rounded-md",
@@ -436,6 +575,11 @@ export default function Request({ showToast, setActiveTab }) {
                       <p className="text-xs uppercase tracking-[0.18em] text-[#3f4948]/70">
                         Request manifest
                       </p>
+                      {item.maxAvailable !== null && item.maxAvailable !== undefined && (
+                        <p className="mt-1 text-xs font-semibold text-[#004b49]">
+                          Available: {item.maxAvailable} {item.unit}
+                        </p>
+                      )}
                     </div>
 
                     {form.requestedItems.length > 1 && (
@@ -453,42 +597,40 @@ export default function Request({ showToast, setActiveTab }) {
                     <Input
                       label="Item Name"
                       value={item.itemName}
-                      onChange={(e) => updateItem(index, "itemName", e.target.value)}
+                      readOnly
+                      disabled
                       placeholder="e.g. Rice"
                     />
 
                     <Input
                       label="Quantity"
-                      type="number"
+                      type="text"
                       value={item.quantity}
                       onChange={(e) => updateItem(index, "quantity", e.target.value)}
+                      onKeyDown={blockInvalidQuantityKeys}
+                      inputMode="numeric"
+                      placeholder="Enter quantity"
                     />
 
                     <Input
                       label="Unit"
                       value={item.unit}
-                      onChange={(e) => updateItem(index, "unit", e.target.value)}
+                      readOnly
+                      disabled
                       placeholder="kg, boxes..."
                     />
 
                     <Input
                       label="Category"
                       value={item.category}
-                      onChange={(e) => updateItem(index, "category", e.target.value)}
+                      readOnly
+                      disabled
                       placeholder="Dry Goods"
                     />
                   </div>
                 </div>
               ))}
             </div>
-
-            <button
-              type="button"
-              onClick={addItem}
-              className="mt-5 w-full rounded-full bg-[#e4e9e9] px-6 py-4 font-bold text-[#003331] transition hover:bg-[#dee3e3]"
-            >
-              + Add Item To Request
-            </button>
 
             <div className="mt-8">
               <label className="mb-2 block text-sm font-extrabold uppercase tracking-[0.18em] text-[#3f4948]">
@@ -652,7 +794,7 @@ function Input({ label, ...props }) {
       </label>
       <input
         {...props}
-        className="w-full rounded-full border-none bg-[#e4e9e9] px-5 py-4 text-lg text-[#171d1d] outline-none ring-0 focus:ring-2 focus:ring-[#003331]/20"
+        className="w-full rounded-full border-none bg-[#e4e9e9] px-5 py-4 text-lg text-[#171d1d] outline-none ring-0 focus:ring-2 focus:ring-[#003331]/20 disabled:cursor-not-allowed disabled:text-[#171d1d] disabled:opacity-100"
       />
     </div>
   );
