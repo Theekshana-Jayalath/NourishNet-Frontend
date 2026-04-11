@@ -1,4 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Cell
+} from 'recharts'
 import { API, authHeaders, parseJsonSafe, Loader, Icons } from './NgoManagerDashboard'
 
 const StatCard = ({ title, value, accent = 'border-teal-600', dark = false, icon, tag }) => (
@@ -28,26 +38,67 @@ const StatCard = ({ title, value, accent = 'border-teal-600', dark = false, icon
   </div>
 )
 
+const CustomTooltip = ({ active, payload, label }) => {
+  if (!active || !payload || !payload.length) return null
+
+  return (
+    <div className="rounded-2xl bg-white px-4 py-3 shadow-xl border border-slate-100">
+      <p className="text-sm font-bold text-slate-900">{label}</p>
+      <div className="mt-2 space-y-1">
+        {payload.map((entry) => (
+          <p key={entry.dataKey} className="text-sm font-medium" style={{ color: entry.color }}>
+            {entry.name}: <span className="font-bold">{entry.value}</span>
+          </p>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 const DashboardTab = ({ setActiveTab }) => {
   const [stats, setStats] = useState(null)
+  const [applications, setApplications] = useState([])
+  const [requests, setRequests] = useState([])
+  const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [impactView, setImpactView] = useState('weekly')
 
   useEffect(() => {
-    const loadStats = async () => {
+    const loadAll = async () => {
       try {
-        const res = await fetch(`${API()}/stats`, { headers: authHeaders() })
-        const data = await parseJsonSafe(res)
-        if (!res.ok) throw new Error(data.message || 'Failed to fetch stats')
-        setStats(data)
+        const [statsRes, applicationsRes, requestsRes, usersRes] = await Promise.all([
+          fetch(`${API()}/stats`, { headers: authHeaders() }),
+          fetch(`${API()}/applications`, { headers: authHeaders() }),
+          fetch(`${API()}/requests`, { headers: authHeaders() }),
+          fetch(`${API()}/users`, { headers: authHeaders() })
+        ])
+
+        const statsData = await parseJsonSafe(statsRes)
+        const applicationsData = await parseJsonSafe(applicationsRes)
+        const requestsData = await parseJsonSafe(requestsRes)
+        const usersData = await parseJsonSafe(usersRes)
+
+        if (!statsRes.ok) throw new Error(statsData.message || 'Failed to fetch stats')
+        if (!applicationsRes.ok) throw new Error(applicationsData.message || 'Failed to fetch applications')
+        if (!requestsRes.ok) throw new Error(requestsData.message || 'Failed to fetch requests')
+        if (!usersRes.ok) throw new Error(usersData.message || 'Failed to fetch users')
+
+        setStats(statsData)
+        setApplications(Array.isArray(applicationsData) ? applicationsData : [])
+        setRequests(Array.isArray(requestsData) ? requestsData : [])
+        setUsers(Array.isArray(usersData) ? usersData : [])
       } catch (err) {
         console.error(err)
         setStats(null)
+        setApplications([])
+        setRequests([])
+        setUsers([])
       } finally {
         setLoading(false)
       }
     }
 
-    loadStats()
+    loadAll()
   }, [])
 
   const activity = useMemo(() => {
@@ -80,6 +131,87 @@ const DashboardTab = ({ setActiveTab }) => {
     ]
   }, [stats])
 
+  const impactChartData = useMemo(() => {
+    if (impactView === 'weekly') {
+      const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+      const today = new Date()
+      const currentDay = today.getDay()
+      const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay
+      const monday = new Date(today)
+      monday.setHours(0, 0, 0, 0)
+      monday.setDate(today.getDate() + mondayOffset)
+
+      const weekData = dayNames.map((day, index) => {
+        const start = new Date(monday)
+        start.setDate(monday.getDate() + index)
+        start.setHours(0, 0, 0, 0)
+
+        const end = new Date(start)
+        end.setHours(23, 59, 59, 999)
+
+        const approvedApplications = applications.filter((app) => {
+          if (app.status !== 'approved') return false
+          const date = new Date(app.approvedAt || app.updatedAt || app.createdAt)
+          return date >= start && date <= end
+        }).length
+
+        const approvedRequests = requests.filter((req) => {
+          if (req.status !== 'APPROVED') return false
+          const date = new Date(req.approvedAt || req.updatedAt || req.createdAt)
+          return date >= start && date <= end
+        }).length
+
+        const activeNgoUsers = users.filter((user) => {
+          if (user.status !== 'ACTIVE') return false
+          const date = new Date(user.updatedAt || user.createdAt)
+          return date >= start && date <= end
+        }).length
+
+        return {
+          label: day,
+          approvedApplications,
+          approvedRequests,
+          activeNgoUsers
+        }
+      })
+
+      return weekData
+    }
+
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ]
+    const year = new Date().getFullYear()
+
+    return monthNames.map((month, index) => {
+      const approvedApplications = applications.filter((app) => {
+        if (app.status !== 'approved') return false
+        const date = new Date(app.approvedAt || app.updatedAt || app.createdAt)
+        return date.getFullYear() === year && date.getMonth() === index
+      }).length
+
+      const approvedRequests = requests.filter((req) => {
+        if (req.status !== 'APPROVED') return false
+        const date = new Date(req.approvedAt || req.updatedAt || req.createdAt)
+        return date.getFullYear() === year && date.getMonth() === index
+      }).length
+
+      const activeNgoUsers = users.filter((user) => {
+        if (user.status !== 'ACTIVE') return false
+        const date = new Date(user.updatedAt || user.createdAt)
+        return date.getFullYear() === year && date.getMonth() === index
+      }).length
+
+      return {
+        label: month,
+        approvedApplications,
+        approvedRequests,
+        activeNgoUsers
+      }
+    })
+  }, [impactView, applications, requests, users])
+
   if (loading) return <Loader />
 
   const applicationTotal = stats?.applications?.total || 0
@@ -90,12 +222,6 @@ const DashboardTab = ({ setActiveTab }) => {
   const requestDeclined = stats?.requests?.declined || 0
   const activeUsers = stats?.users?.active || 0
   const totalUsers = stats?.users?.total || 0
-
-  const appFulfillment = applicationTotal ? Math.round((applicationApproved / applicationTotal) * 100) : 0
-  const requestFulfillment =
-    requestPending + requestApproved + requestDeclined
-      ? Math.round((requestApproved / (requestPending + requestApproved + requestDeclined)) * 100)
-      : 0
 
   return (
     <div className="mx-auto max-w-7xl space-y-8">
@@ -139,38 +265,73 @@ const DashboardTab = ({ setActiveTab }) => {
             <div className="mb-8 flex items-center justify-between">
               <h3 className="text-2xl font-black text-slate-900">Impact Overview</h3>
               <div className="flex rounded-full bg-white p-1">
-                <button className="rounded-full bg-[#f3f7f8] px-4 py-2 text-sm font-bold text-teal-800">
+                <button
+                  onClick={() => setImpactView('weekly')}
+                  className={`rounded-full px-4 py-2 text-sm font-bold ${
+                    impactView === 'weekly'
+                      ? 'bg-[#f3f7f8] text-teal-800'
+                      : 'text-slate-600'
+                  }`}
+                >
+                  Weekly
+                </button>
+                <button
+                  onClick={() => setImpactView('monthly')}
+                  className={`rounded-full px-4 py-2 text-sm font-bold ${
+                    impactView === 'monthly'
+                      ? 'bg-[#f3f7f8] text-teal-800'
+                      : 'text-slate-600'
+                  }`}
+                >
                   Monthly
                 </button>
-                <button className="px-4 py-2 text-sm font-semibold text-slate-600">Yearly</button>
               </div>
             </div>
 
-            <div className="space-y-6">
-              <div>
-                <div className="mb-2 flex items-center justify-between text-sm font-semibold">
-                  <span>Application Fulfillment</span>
-                  <span className="text-teal-800">{appFulfillment}%</span>
-                </div>
-                <div className="h-4 rounded-full bg-emerald-200">
-                  <div
-                    className="h-4 rounded-full bg-teal-700 transition-all duration-500"
-                    style={{ width: `${appFulfillment}%` }}
+            <div className="h-[360px] rounded-[28px] bg-transparent">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={impactChartData}
+                  margin={{ top: 10, right: 10, left: 0, bottom: 20 }}
+                  barCategoryGap={impactView === 'weekly' ? '20%' : '35%'}
+                >
+                  <CartesianGrid strokeDasharray="4 4" stroke="#bfd0d5" vertical={false} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fill: '#334155', fontSize: 12, fontWeight: 700 }}
+                    tickLine={false}
+                    axisLine={false}
+                    interval={0}
+                    angle={impactView === 'monthly' ? -20 : 0}
+                    textAnchor={impactView === 'monthly' ? 'end' : 'middle'}
+                    height={impactView === 'monthly' ? 70 : 40}
                   />
-                </div>
-              </div>
+                  <YAxis
+                    tick={{ fill: '#64748b', fontSize: 12 }}
+                    tickLine={false}
+                    axisLine={false}
+                    allowDecimals={false}
+                  />
+                  <Tooltip cursor={false} content={<CustomTooltip />} />
+                  <Bar dataKey="approvedApplications" name="Approved Applications" radius={[10, 10, 0, 0]} fill="#317873" />
+                  <Bar dataKey="approvedRequests" name="Approved Requests" radius={[10, 10, 0, 0]} fill="#d97706" />
+                  <Bar dataKey="activeNgoUsers" name="Active NGO Users" radius={[10, 10, 0, 0]} fill="#66ada4" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
 
-              <div>
-                <div className="mb-2 flex items-center justify-between text-sm font-semibold">
-                  <span>Resource Allocation</span>
-                  <span className="text-orange-700">{requestFulfillment}%</span>
-                </div>
-                <div className="h-4 rounded-full bg-orange-200">
-                  <div
-                    className="h-4 rounded-full bg-orange-700 transition-all duration-500"
-                    style={{ width: `${requestFulfillment}%` }}
-                  />
-                </div>
+            <div className="mt-6 flex flex-wrap gap-6">
+              <div className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded-sm bg-[#317873]" />
+                <span className="text-sm font-semibold text-slate-700">Approved Applications</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded-sm bg-[#d97706]" />
+                <span className="text-sm font-semibold text-slate-700">Approved Requests</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded-sm bg-[#66ada4]" />
+                <span className="text-sm font-semibold text-slate-700">Active NGO Users</span>
               </div>
             </div>
 

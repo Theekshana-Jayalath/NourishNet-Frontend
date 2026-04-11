@@ -1,9 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { filterMyRequests, getRequests } from "../../api";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  Legend,
+} from "recharts";
 
 export default function RequestDashboard() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [chartView, setChartView] = useState("monthly");
 
   useEffect(() => {
     loadRequests();
@@ -92,6 +103,7 @@ export default function RequestDashboard() {
 
     requests.forEach((req) => {
       const created = req.createdAt ? new Date(req.createdAt) : null;
+
       if (created && !Number.isNaN(created.getTime())) {
         const createdKey = `${created.getFullYear()}-${created.getMonth()}`;
         const createdMonth = months.find((m) => m.key === createdKey);
@@ -105,9 +117,7 @@ export default function RequestDashboard() {
         req.status === "APPROVED" ||
         req.status === "PARTIALLY_APPROVED"
       ) {
-        const completedAt = req.updatedAt
-          ? new Date(req.updatedAt)
-          : created;
+        const completedAt = req.updatedAt ? new Date(req.updatedAt) : created;
 
         if (completedAt && !Number.isNaN(completedAt.getTime())) {
           const completedKey = `${completedAt.getFullYear()}-${completedAt.getMonth()}`;
@@ -122,12 +132,59 @@ export default function RequestDashboard() {
     return months;
   }, [requests]);
 
-  const maxChartValue = useMemo(() => {
-    return Math.max(
-      1,
-      ...monthlyData.flatMap((item) => [item.inbound, item.fulfilled])
-    );
-  }, [monthlyData]);
+  const weeklyData = useMemo(() => {
+    const today = new Date();
+    const days = [];
+
+    for (let i = 6; i >= 0; i -= 1) {
+      const d = new Date(today);
+      d.setHours(0, 0, 0, 0);
+      d.setDate(today.getDate() - i);
+
+      days.push({
+        key: d.toISOString().split("T")[0],
+        label: d.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase(),
+        inbound: 0,
+        fulfilled: 0,
+      });
+    }
+
+    requests.forEach((req) => {
+      const created = req.createdAt ? new Date(req.createdAt) : null;
+
+      if (created && !Number.isNaN(created.getTime())) {
+        const createdKey = new Date(created);
+        createdKey.setHours(0, 0, 0, 0);
+        const key = createdKey.toISOString().split("T")[0];
+        const foundDay = days.find((d) => d.key === key);
+        if (foundDay) {
+          foundDay.inbound += 1;
+        }
+      }
+
+      if (
+        req.status === "FULFILLED" ||
+        req.status === "APPROVED" ||
+        req.status === "PARTIALLY_APPROVED"
+      ) {
+        const completedAt = req.updatedAt ? new Date(req.updatedAt) : created;
+
+        if (completedAt && !Number.isNaN(completedAt.getTime())) {
+          const completedKey = new Date(completedAt);
+          completedKey.setHours(0, 0, 0, 0);
+          const key = completedKey.toISOString().split("T")[0];
+          const foundDay = days.find((d) => d.key === key);
+          if (foundDay) {
+            foundDay.fulfilled += 1;
+          }
+        }
+      }
+    });
+
+    return days;
+  }, [requests]);
+
+  const chartData = chartView === "weekly" ? weeklyData : monthlyData;
 
   const peopleServed = useMemo(() => {
     return requests
@@ -170,6 +227,26 @@ export default function RequestDashboard() {
       );
     }).length;
   }, [requests]);
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (!active || !payload || !payload.length) return null;
+
+    return (
+      <div className="rounded-2xl border border-[#bfc8c7]/20 bg-white px-4 py-3 shadow-xl">
+        <p className="mb-2 text-sm font-bold text-[#003331]">{label}</p>
+        <div className="space-y-1 text-xs">
+          <p className="text-[#3f4948]">
+            <span className="font-semibold text-[#003331]">New Inbound:</span>{" "}
+            {payload.find((item) => item.dataKey === "inbound")?.value ?? 0}
+          </p>
+          <p className="text-[#3f4948]">
+            <span className="font-semibold text-[#003331]">Fulfilled:</span>{" "}
+            {payload.find((item) => item.dataKey === "fulfilled")?.value ?? 0}
+          </p>
+        </div>
+      </div>
+    );
+  };
 
   if (loading) {
     return (
@@ -243,67 +320,74 @@ export default function RequestDashboard() {
             </div>
 
             <div className="flex gap-2">
-              <button className="rounded-full bg-[#dee3e3] px-4 py-2 text-xs font-bold text-[#171d1d]">
+              <button
+                type="button"
+                onClick={() => setChartView("weekly")}
+                className={`rounded-full px-4 py-2 text-xs font-bold transition ${
+                  chartView === "weekly"
+                    ? "bg-gradient-to-r from-[#003331] to-[#004b49] text-white shadow-md"
+                    : "bg-[#dee3e3] text-[#171d1d]"
+                }`}
+              >
                 Weekly
               </button>
-              <button className="rounded-full bg-gradient-to-r from-[#003331] to-[#004b49] px-4 py-2 text-xs font-bold text-white shadow-md">
+              <button
+                type="button"
+                onClick={() => setChartView("monthly")}
+                className={`rounded-full px-4 py-2 text-xs font-bold transition ${
+                  chartView === "monthly"
+                    ? "bg-gradient-to-r from-[#003331] to-[#004b49] text-white shadow-md"
+                    : "bg-[#dee3e3] text-[#171d1d]"
+                }`}
+              >
                 Monthly
               </button>
             </div>
           </div>
 
-          <div className="flex min-h-[320px] items-end justify-between gap-4">
-            {monthlyData.map((item) => {
-              const inboundHeight = Math.max(
-                item.inbound > 0 ? 24 : 0,
-                (item.inbound / maxChartValue) * 220
-              );
-
-              const fulfilledHeight = Math.max(
-                item.fulfilled > 0 ? 24 : 0,
-                (item.fulfilled / maxChartValue) * 220
-              );
-
-              return (
-                <div
-                  key={item.key}
-                  className="flex h-[280px] w-full flex-col items-center justify-end gap-3"
-                >
-                  <div className="flex h-[220px] w-full items-end justify-center gap-3">
-                    <div className="flex w-1/2 flex-col items-center justify-end">
-                      <div
-                        className="w-full rounded-t-xl bg-[#003331]/15 transition-all duration-500"
-                        style={{ height: `${inboundHeight}px` }}
-                        title={`Inbound: ${item.inbound}`}
-                      />
-                      <span className="mt-2 text-xs font-bold text-[#3f4948]">
-                        {item.inbound}
-                      </span>
-                    </div>
-
-                    <div className="flex w-1/2 flex-col items-center justify-end">
-                      <div
-                        className="w-full rounded-t-xl bg-gradient-to-t from-[#003331] to-[#004b49] transition-all duration-500"
-                        style={{ height: `${fulfilledHeight}px` }}
-                        title={`Fulfilled: ${item.fulfilled}`}
-                      />
-                      <span className="mt-2 text-xs font-bold text-[#003331]">
-                        {item.fulfilled}
-                      </span>
-                    </div>
-                  </div>
-
-                  <span className="text-[11px] font-bold tracking-[0.15em] text-[#3f4948]">
-                    {item.label}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="mt-8 flex gap-6">
-            <LegendDot label="New Inbound" color="bg-[#003331]/20" />
-            <LegendDot label="Fulfilled" color="bg-[#004b49]" />
+          <div className="h-[340px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartData}
+                margin={{ top: 10, right: 10, left: -20, bottom: 10 }}
+                barGap={10}
+              >
+                <CartesianGrid vertical={false} stroke="#d9e5e4" strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fill: "#3f4948", fontSize: 11, fontWeight: 700 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  allowDecimals={false}
+                  tick={{ fill: "#707978", fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip
+                  content={<CustomTooltip />}
+                  cursor={{ fill: "rgba(0, 51, 49, 0.04)" }}
+                />
+                <Legend
+                  wrapperStyle={{ fontSize: "12px", color: "#3f4948" }}
+                />
+                <Bar
+                  dataKey="inbound"
+                  name="New Inbound"
+                  fill="#c9d7d6"
+                  radius={[10, 10, 0, 0]}
+                  maxBarSize={42}
+                />
+                <Bar
+                  dataKey="fulfilled"
+                  name="Fulfilled"
+                  fill="#004b49"
+                  radius={[10, 10, 0, 0]}
+                  maxBarSize={42}
+                />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
@@ -467,15 +551,6 @@ function StatCard({ title, value, icon, badge, badgeClass, iconWrap }) {
           <p className="mt-1 text-5xl font-black text-[#003331]">{value}</p>
         </div>
       </div>
-    </div>
-  );
-}
-
-function LegendDot({ label, color }) {
-  return (
-    <div className="flex items-center gap-2">
-      <div className={`h-3 w-3 rounded-full ${color}`} />
-      <span className="text-xs font-bold text-[#3f4948]">{label}</span>
     </div>
   );
 }
