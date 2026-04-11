@@ -1,45 +1,151 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Search, PlusCircle } from "lucide-react";
+import axios from "../api/axiosInstance";
+// local images
+import riceImg from '../assets/rice.png';
+import dhalImg from '../assets/dhal.png';
+import flourImg from '../assets/flour.png';
+import sugarImg from '../assets/sugar.png';
+import saltImg from '../assets/salt.png';
+import milkPowderImg from '../assets/milkPowder.png';
+import vegCurryImg from '../assets/vegitableCurry.png';
+import fishCurryImg from '../assets/fishCurry.png';
+import chickenFriedRiceImg from '../assets/chickenFriedRice.png';
+import eggSandwichImg from '../assets/eggSandwich.png';
 
-const sampleItems = [
-  {
-    id: 1,
-    name: "Rice",
-    image: "https://images.unsplash.com/photo-1586201375761-83865001e31c",
-    quantity: 50,
-    unit: "kg",
-    type: "Unprocessed",
-    expireDate: "2026-05-01",
-    description: "White raw rice good for families",
-  },
-  {
-    id: 2,
-    name: "Canned Beans",
-    image: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d",
-    quantity: 100,
-    unit: "pcs",
-    type: "Processed",
-    expireDate: "2026-04-15",
-    description: "Ready to eat canned beans",
-  },
-  {
-    id: 3,
-    name: "Carrots",
-    image: "https://images.unsplash.com/photo-1582515073490-dc0e9f3f97d8",
-    quantity: 30,
-    unit: "kg",
-    type: "Unprocessed",
-    expireDate: "2026-04-10",
-    description: "Fresh organic carrots",
-  },
-];
+// items will be loaded from backend donationForms collection
+const sampleItems = [];
 
 const FoodItemsBoard = () => {
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("All");
-  const [expireDate, setExpireDate] = useState("");
 
-  const filteredItems = sampleItems.filter((item) => {
+  // UI state for selecting a quantity when adding an item
+  const [selectedItemId, setSelectedItemId] = useState(null);
+  const [selectedQty, setSelectedQty] = useState(1);
+  // store confirmation messages per-item so they show only on the relevant card
+  const [messages, setMessages] = useState({});
+  const [items, setItems] = useState(sampleItems);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  // simple helper to generate an image URL based on product name using Unsplash source
+  const localImageMap = [
+    { keywords: ['rice'], img: riceImg },
+    { keywords: ['dhal', 'dal', 'lentil'], img: dhalImg },
+    { keywords: ['flour'], img: flourImg },
+    { keywords: ['sugar'], img: sugarImg },
+    { keywords: ['salt'], img: saltImg },
+    { keywords: ['milk', 'powder'], img: milkPowderImg },
+    { keywords: ['veg', 'vegetable', 'vegitable'], img: vegCurryImg },
+    { keywords: ['fish'], img: fishCurryImg },
+    { keywords: ['chicken'], img: chickenFriedRiceImg },
+    { keywords: ['egg'], img: eggSandwichImg },
+  ];
+
+  const imageForName = (name) => {
+    const n = (name || '').toLowerCase();
+    // prefer longer/more specific keywords first
+    const sorted = [...localImageMap].sort((a, b) => {
+      const aMax = Math.max(...a.keywords.map((k) => k.length));
+      const bMax = Math.max(...b.keywords.map((k) => k.length));
+      return bMax - aMax;
+    });
+
+    for (const entry of sorted) {
+      for (const k of entry.keywords) {
+        // match whole words where possible
+        try {
+          const re = new RegExp(`\\b${k.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}\\b`, 'i');
+          if (re.test(n)) return entry.img;
+        } catch (e) {
+          // fallback to substring match if regex fails for some keyword
+          if (n.includes(k)) return entry.img;
+        }
+      }
+    }
+
+    const query = encodeURIComponent(name || 'food');
+    return `https://source.unsplash.com/featured/?${query},food`;
+  };
+
+  useEffect(() => {
+    let mounted = true;
+
+  async function loadDonations() {
+      setLoading(true);
+      try {
+  const res = await axios.get('/donationForms');
+        setError(null);
+        // backend returns { count, data } — support that shape, and also support direct array
+        const payload = res.data;
+        const forms = Array.isArray(payload)
+          ? payload
+          : (payload && payload.data) || [];
+
+        // Aggregate items by productId or name so repeated donations of the same product
+        // are shown as a single card with summed quantity.
+        const agg = {};
+
+        forms.forEach((form) => {
+          const itemsList = (form.items && form.items.length)
+            ? form.items
+            : [{ name: null, productId: null, qty: 1, unit: 'pcs', notes: form.notes, expireDate: form.expireDate }];
+
+          itemsList.forEach((it) => {
+            // Build a friendly display name: prefer explicit item name, then productName, then show a labeled product code.
+            const rawName = it.name || it.productName || null;
+            const code = it.productId || null;
+            const name = rawName || (code ? `Product ${code}` : (form.donorName || 'Donation Item'));
+            const key = String(code || rawName || name).toLowerCase().trim();
+            const qty = Number(it.qty || it.quantity || 1) || 0;
+            if (!agg[key]) {
+              agg[key] = {
+                id: key,
+                name,
+                description: it.notes || form.notes || '',
+                quantity: qty,
+                unit: it.unit || 'pcs',
+                type: form.donationType || 'Unprocessed',
+                expireDate: it.expireDate || form.expireDate || '',
+                image: imageForName(name),
+                rawForms: [form],
+              };
+            } else {
+              agg[key].quantity = (agg[key].quantity || 0) + qty;
+              // keep earliest expire date (if present)
+              if (it.expireDate) {
+                const prev = agg[key].expireDate;
+                agg[key].expireDate = prev ? (it.expireDate < prev ? it.expireDate : prev) : it.expireDate;
+              }
+              // track source forms for potential details
+              if (!agg[key].rawForms.find((f) => f._id === form._id)) agg[key].rawForms.push(form);
+            }
+          });
+        });
+
+        const boardItems = Object.values(agg);
+
+  if (mounted) setItems(boardItems);
+      } catch (err) {
+        // fallback: keep items empty and log for debugging
+        console.error('Failed to load donation forms', err);
+        setError(err.message || String(err));
+        setItems([]);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+
+    loadDonations();
+
+    return () => {
+      mounted = false;
+    };
+  }, [reloadKey]);
+
+  const filteredItems = items.filter((item) => {
     const matchSearch = item.name
       .toLowerCase()
       .includes(search.toLowerCase());
@@ -47,10 +153,7 @@ const FoodItemsBoard = () => {
     const matchType =
       filterType === "All" || item.type === filterType;
 
-    const matchDate =
-      !expireDate || item.expireDate <= expireDate;
-
-    return matchSearch && matchType && matchDate;
+  return matchSearch && matchType;
   });
 
   return (
@@ -85,14 +188,19 @@ const FoodItemsBoard = () => {
           <option value="Unprocessed">Unprocessed</option>
         </select>
 
-        <input
-          type="date"
-          className="border rounded-lg px-4 py-2"
-          onChange={(e) => setExpireDate(e.target.value)}
-        />
+  {/* date filter removed per request */}
       </div>
 
       {/* Items Grid */}
+      {loading && <div className="text-sm text-gray-600 mb-4">Loading donations…</div>}
+      {error && (
+        <div className="text-sm text-red-600 mb-4">
+          Failed to load donations: {error}. <button className="underline" onClick={() => {
+            setError(null); setItems([]); setReloadKey(k => k + 1);
+          }}>Retry</button>
+        </div>
+      )}
+  {/* debug payload removed */}
       <div className="grid md:grid-cols-3 gap-6">
         {filteredItems.map((item) => (
           <div
@@ -137,18 +245,65 @@ const FoodItemsBoard = () => {
                   </span>
                 </p>
 
-                <p>
-                  <span className="font-semibold">
-                    Expire:
-                  </span>{" "}
-                  {item.expireDate}
-                </p>
+                {/* expire date removed from card UI */}
               </div>
 
-              <button className="mt-4 w-full flex items-center justify-center gap-2 bg-teal-700 hover:bg-teal-900 text-white py-2 rounded-lg">
-                <PlusCircle size={18} />
-                Add / Select
-              </button>
+              <div className="mt-4">
+                <button
+                  className="w-full flex items-center justify-center gap-2 bg-teal-700 hover:bg-teal-900 text-white py-2 rounded-lg"
+                  onClick={() => {
+                    setSelectedItemId(item.id);
+                    setSelectedQty(1);
+                  }}
+                >
+                  <PlusCircle size={18} />
+                  Add 
+                </button>
+
+                {/* Inline quantity selector when this item is selected */}
+                {selectedItemId === item.id && (
+                  <div className="mt-3 flex items-center gap-2">
+                    <select
+                      className="border rounded-lg px-3 py-2"
+                      value={selectedQty}
+                      onChange={(e) => setSelectedQty(Number(e.target.value))}
+                    >
+                      {Array.from({ length: item.quantity }, (_, i) => i + 1).map(
+                        (n) => (
+                          <option key={n} value={n}>
+                            {n}
+                          </option>
+                        )
+                      )}
+                    </select>
+
+                    <button
+                      className="bg-green-600 hover:bg-green-800 text-white px-4 py-2 rounded-lg"
+                        onClick={() => {
+                          // For now just show confirmation; integration with cart/API can be added later
+                          setMessages((prev) => ({
+                            ...prev,
+                            [item.id]: `${selectedQty} ${item.unit} of ${item.name} selected.`,
+                          }));
+                          setSelectedItemId(null);
+                        }}
+                    >
+                      Confirm
+                    </button>
+
+                    <button
+                      className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-2 rounded-lg"
+                      onClick={() => setSelectedItemId(null)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+
+                {messages[item.id] && (
+                  <p className="mt-2 text-sm text-green-700">{messages[item.id]}</p>
+                )}
+              </div>
             </div>
           </div>
         ))}
