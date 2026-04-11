@@ -18,6 +18,8 @@ import DonationApplication from './pages/DonationApplication'
 import DonorHistory from './pages/DonorHistory'
 import DonorProfile from './pages/DonorProfile'
 import Drivers from './pages/admin/Drivers'
+import NgoManagerDashboard from './pages/ngoManager/NgoManagerDashboard'
+
 
 const App = () => {
   return (
@@ -68,7 +70,7 @@ function Main() {
             {/* manager-specific named routes (Login redirects here) */}
             <Route path='/ngo-manager-dashboard' element={<NgoDashboard />} />
             {/* Removed DonorManagerDashboard route */}
-            <Route path='/driver-manager-dashboard' element={<DriverDashboard />} />
+            <Route path='/driver-manager-dashboard' element={<ManagerDashboard />} />
               <Route path='/DonationApplication' element={<DonationApplication />} />
       </Routes>
       
