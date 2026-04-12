@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { getToken, getUser, BASE_URL } from "../api";
+import { getToken, getUser, BASE_URL } from "../../api";
 
 const UNPROCESSED_PRODUCTS = [
   { productId: "UNP001", label: "Rice" },
@@ -19,93 +19,180 @@ const PROCESSED_PRODUCTS = [
   { productId: "PRO005", label: "Dhal Curry (Cooked)" },
 ];
 
+const STORAGE_OPTIONS = [
+  "Room Temperature",
+  "Refrigerated",
+  "Frozen",
+  "Cool Place",
+];
+
+const getProductsByType = (processingType) => {
+  return processingType === "Processed"
+    ? PROCESSED_PRODUCTS
+    : UNPROCESSED_PRODUCTS;
+};
+
+const getUnitsByType = (processingType) => {
+  return processingType === "Processed"
+    ? ["Packets", "Pieces"]
+    : ["Kg", "g"];
+};
+
+const createEmptyItem = () => ({
+  productId: "",
+  processingType: "Unprocessed",
+  quantity: 1,
+  unit: "Kg",
+  expirationDate: "",
+  StorageType: "Room Temperature",
+});
+
+const getTodayDate = () => {
+  return new Date().toISOString().split("T")[0];
+};
+
 const DonationApplication = () => {
   const [loggedUser, setLoggedUser] = useState(null);
-
   const [formData, setFormData] = useState({
-    items: [
-      {
-        productId: "",
-        processingType: "Unprocessed",
-        quantity: 1,
-        unit: "Kg",
-        expirationDate: "",
-        StorageType: "Room Temperature",
-      },
-    ],
+    items: [createEmptyItem()],
   });
-
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const u = getUser();
-    if (u && Object.keys(u).length) setLoggedUser(u);
+    const user = getUser();
+    if (user && Object.keys(user).length > 0) {
+      setLoggedUser(user);
+    }
   }, []);
 
-  const getProductsByType = (processingType) => {
-    return processingType === "Processed"
-      ? PROCESSED_PRODUCTS
-      : UNPROCESSED_PRODUCTS;
+  const donorId = useMemo(() => {
+    return loggedUser?._id || loggedUser?.id || loggedUser?.userId || null;
+  }, [loggedUser]);
+
+  const clearAlerts = () => {
+    setMessage("");
+    setError("");
   };
 
   const handleItemChange = (index, e) => {
     const { name, value } = e.target;
-    const updatedItems = [...formData.items];
 
-    updatedItems[index][name] =
-      name === "quantity" ? Number(value) : value;
+    setFormData((prev) => {
+      const updatedItems = [...prev.items];
+      const currentItem = { ...updatedItems[index] };
 
-    if (name === "processingType") {
-      updatedItems[index].productId = "";
-    }
+      currentItem[name] = name === "quantity" ? Number(value) : value;
 
-    setFormData({ ...formData, items: updatedItems });
+      if (name === "processingType") {
+        currentItem.productId = "";
+        currentItem.unit = value === "Processed" ? "Packets" : "Kg";
+      }
+
+      if (name === "unit") {
+        const allowedUnits = getUnitsByType(currentItem.processingType);
+        if (!allowedUnits.includes(value)) {
+          currentItem.unit = allowedUnits[0];
+        }
+      }
+
+      updatedItems[index] = currentItem;
+      return { ...prev, items: updatedItems };
+    });
+
+    clearAlerts();
   };
 
   const addItem = () => {
-    setFormData({
-      ...formData,
-      items: [
-        ...formData.items,
-        {
-          productId: "",
-          processingType: "Unprocessed",
-          quantity: 1,
-          unit: "Kg",
-          expirationDate: "",
-          StorageType: "Room Temperature",
-        },
-      ],
-    });
+    setFormData((prev) => ({
+      ...prev,
+      items: [...prev.items, createEmptyItem()],
+    }));
+    clearAlerts();
   };
 
   const removeItem = (index) => {
     if (formData.items.length === 1) return;
 
-    const updatedItems = formData.items.filter((_, i) => i !== index);
-    setFormData({ ...formData, items: updatedItems });
+    setFormData((prev) => ({
+      ...prev,
+      items: prev.items.filter((_, i) => i !== index),
+    }));
+    clearAlerts();
+  };
+
+  const validateForm = () => {
+    if (!loggedUser) {
+      return "No logged-in user found.";
+    }
+
+    if (loggedUser.role !== "donor") {
+      return "Only donors can submit donation applications.";
+    }
+
+    if (!donorId) {
+      return "Donor ID not found. Please log in again.";
+    }
+
+    if (!formData.items || formData.items.length === 0) {
+      return "Please add at least one donation item.";
+    }
+
+    for (let i = 0; i < formData.items.length; i += 1) {
+      const item = formData.items[i];
+      const itemNumber = i + 1;
+
+      if (!item.processingType) {
+        return `Please select processing type for item ${itemNumber}.`;
+      }
+
+      if (!item.productId) {
+        return `Please select a product for item ${itemNumber}.`;
+      }
+
+      if (!item.quantity || Number(item.quantity) < 1) {
+        return `Quantity must be at least 1 for item ${itemNumber}.`;
+      }
+
+      const allowedUnits = getUnitsByType(item.processingType);
+      if (!allowedUnits.includes(item.unit)) {
+        return `Invalid unit selected for item ${itemNumber}.`;
+      }
+
+      if (!item.StorageType) {
+        return `Please select storage type for item ${itemNumber}.`;
+      }
+
+      if (!STORAGE_OPTIONS.includes(item.StorageType)) {
+        return `Invalid storage type selected for item ${itemNumber}.`;
+      }
+
+      if (item.expirationDate) {
+        const selectedDate = new Date(item.expirationDate);
+        const today = new Date(getTodayDate());
+
+        if (selectedDate < today) {
+          return `Expiration date cannot be in the past for item ${itemNumber}.`;
+        }
+      }
+    }
+
+    return null;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setMessage("");
-    setError("");
+    clearAlerts();
 
-    if (!loggedUser) {
-      setError("No logged-in user found.");
-      return;
-    }
-
-    if (loggedUser.role !== "donor") {
-      setError("Only donors can submit donation applications.");
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
     try {
-      // derive donor id from logged user persisted by the backend at login
-      const donorId =
-        loggedUser?._id || loggedUser?.id || loggedUser?.userId || null;
+      setLoading(true);
 
       const payload = {
         donorId,
@@ -121,32 +208,40 @@ const DonationApplication = () => {
 
       const token = getToken();
 
-      const response = await axios.post(`${BASE_URL}/donationForms`, payload, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-
-      setMessage("Donation application submitted successfully.");
-      setError("");
-
-      setFormData({
-        items: [
-          {
-            productId: "",
-            processingType: "Unprocessed",
-            quantity: 1,
-            unit: "Kg",
-            expirationDate: "",
-            StorageType: "Room Temperature",
+      const response = await axios.post(
+        `${BASE_URL}/donationForms`,
+        payload,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
-        ],
-      });
+        }
+      );
 
-      console.log(response.data);
+      setMessage(
+        response?.data?.message || "Donation application submitted successfully."
+      );
+      setError("");
+      setFormData({ items: [createEmptyItem()] });
+
+      console.log("Donation response:", response.data);
     } catch (err) {
+      console.error("FULL ERROR:", err);
+      console.error("STATUS:", err?.response?.status);
+      console.error("RESPONSE DATA:", err?.response?.data);
+      console.error("MESSAGE:", err?.message);
+
       setError(
-        err.response?.data?.message || "Failed to submit donation application."
+        err?.response?.data?.message ||
+          err?.response?.data?.errorMessage ||
+          err?.response?.data?.error ||
+          err?.message ||
+          "Failed to submit donation application."
       );
       setMessage("");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -157,18 +252,55 @@ const DonationApplication = () => {
 
       <div style={styles.container}>
         <div style={styles.headerCard}>
-      
           <h1 style={styles.heading}>Donation Application</h1>
-          
+          <p style={styles.subText}>
+            Add your donation items and submit them for review.
+          </p>
         </div>
 
-  {/* Donor information intentionally hidden */}
+        {loggedUser && (
+          <div style={styles.userBox}>
+            <div style={styles.userTop}>
+              <div style={styles.avatarCircle}>
+                {(loggedUser?.name || loggedUser?.username || "D")
+                  .charAt(0)
+                  .toUpperCase()}
+              </div>
+
+              <div>
+                <h3 style={styles.userTitle}>
+                  {loggedUser?.name || loggedUser?.username || "Donor"}
+                </h3>
+                <p style={styles.userSub}>
+                  {loggedUser?.email || "Logged in donor"}
+                </p>
+              </div>
+            </div>
+
+            <div style={styles.userGrid}>
+              <div style={styles.infoCard}>
+                <span style={styles.infoLabel}>Role</span>
+                <span style={styles.roleBadge}>
+                  {loggedUser?.role || "donor"}
+                </span>
+              </div>
+
+              <div style={styles.infoCard}>
+                <span style={styles.infoLabel}>Donor ID</span>
+                <span style={styles.infoValueSmall}>{donorId || "N/A"}</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} style={styles.form}>
           <div style={styles.sectionHeader}>
             <div>
               <h2 style={styles.subHeading}>Donation Items</h2>
-            
+              <p style={styles.sectionText}>
+                Processed items show only Packets and Pieces. Unprocessed items
+                show only Kg and g.
+              </p>
             </div>
           </div>
 
@@ -178,17 +310,21 @@ const DonationApplication = () => {
                 <div>
                   <p style={styles.itemNumber}>Item {index + 1}</p>
                   <p style={styles.itemHint}>
-                    Fill in the product and storage details
+                    Fill in the product, quantity, and storage details
                   </p>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => removeItem(index)}
+                  disabled={formData.items.length === 1 || loading}
                   style={{
                     ...styles.removeButton,
-                    opacity: formData.items.length === 1 ? 0.5 : 1,
-                    cursor: formData.items.length === 1 ? "not-allowed" : "pointer",
+                    opacity: formData.items.length === 1 || loading ? 0.5 : 1,
+                    cursor:
+                      formData.items.length === 1 || loading
+                        ? "not-allowed"
+                        : "pointer",
                   }}
                 >
                   Remove
@@ -203,6 +339,7 @@ const DonationApplication = () => {
                     value={item.processingType}
                     onChange={(e) => handleItemChange(index, e)}
                     style={styles.input}
+                    disabled={loading}
                   >
                     <option value="Unprocessed">Unprocessed</option>
                     <option value="Processed">Processed</option>
@@ -217,6 +354,7 @@ const DonationApplication = () => {
                     onChange={(e) => handleItemChange(index, e)}
                     required
                     style={styles.input}
+                    disabled={loading}
                   >
                     <option value="">Select Product</option>
                     {getProductsByType(item.processingType).map((product) => (
@@ -239,6 +377,7 @@ const DonationApplication = () => {
                     onChange={(e) => handleItemChange(index, e)}
                     required
                     style={styles.input}
+                    disabled={loading}
                   />
                 </div>
 
@@ -249,13 +388,13 @@ const DonationApplication = () => {
                     value={item.unit}
                     onChange={(e) => handleItemChange(index, e)}
                     style={styles.input}
+                    disabled={loading}
                   >
-                    <option value="Kg">Kg</option>
-                    <option value="g">g</option>
-                    <option value="L">L</option>
-                    <option value="ml">ml</option>
-                    <option value="Packets">Packets</option>
-                    <option value="Pieces">Pieces</option>
+                    {getUnitsByType(item.processingType).map((unit) => (
+                      <option key={unit} value={unit}>
+                        {unit}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -268,7 +407,9 @@ const DonationApplication = () => {
                     name="expirationDate"
                     value={item.expirationDate}
                     onChange={(e) => handleItemChange(index, e)}
+                    min={getTodayDate()}
                     style={styles.input}
+                    disabled={loading}
                   />
                 </div>
 
@@ -279,11 +420,13 @@ const DonationApplication = () => {
                     value={item.StorageType}
                     onChange={(e) => handleItemChange(index, e)}
                     style={styles.input}
+                    disabled={loading}
                   >
-                    <option value="Room Temperature">Room Temperature</option>
-                    <option value="Refrigerated">Refrigerated</option>
-                    <option value="Frozen">Frozen</option>
-                    <option value="Cool Place">Cool Place</option>
+                    {STORAGE_OPTIONS.map((storage) => (
+                      <option key={storage} value={storage}>
+                        {storage}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -291,12 +434,17 @@ const DonationApplication = () => {
           ))}
 
           <div style={styles.actionRow}>
-            <button type="button" onClick={addItem} style={styles.addButton}>
+            <button
+              type="button"
+              onClick={addItem}
+              style={styles.addButton}
+              disabled={loading}
+            >
               + Add Another Item
             </button>
 
-            <button type="submit" style={styles.submitButton}>
-              Submit Application
+            <button type="submit" style={styles.submitButton} disabled={loading}>
+              {loading ? "Submitting..." : "Submit Application"}
             </button>
           </div>
 
@@ -361,19 +509,6 @@ const styles = {
     textAlign: "center",
     marginBottom: "28px",
     padding: "10px 0 6px",
-  },
-
-  badge: {
-    display: "inline-block",
-    background: "linear-gradient(135deg, #96ded1, #66ada4)",
-    color: "#002a29",
-    padding: "8px 16px",
-    borderRadius: "999px",
-    fontWeight: "700",
-    fontSize: "13px",
-    letterSpacing: "0.4px",
-    marginBottom: "14px",
-    boxShadow: "0 8px 20px rgba(49, 120, 115, 0.18)",
   },
 
   heading: {
@@ -459,13 +594,6 @@ const styles = {
     color: "#317873",
     textTransform: "uppercase",
     letterSpacing: "0.6px",
-  },
-
-  infoValue: {
-    fontSize: "15px",
-    color: "#002a29",
-    fontWeight: "600",
-    wordBreak: "break-word",
   },
 
   infoValueSmall: {

@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { getUser } from "../api";
+import { getUser } from "../../api";
 
 export default function DonorProfile() {
   const raw = getUser() || {}
