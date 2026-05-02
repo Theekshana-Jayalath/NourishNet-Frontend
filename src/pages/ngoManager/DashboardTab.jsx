@@ -101,36 +101,48 @@ const DashboardTab = ({ setActiveTab }) => {
     loadAll()
   }, [])
 
+  // Calculate approved NGOs from users collection (since applications are deleted after approval)
+  const approvedNgosCount = useMemo(() => {
+    return users.filter(user => user.role === 'ngo' && user.status === 'ACTIVE').length
+  }, [users])
+
+  // Calculate total approved (NGOs that have been approved)
+  const totalApproved = approvedNgosCount
+
+  // Total applications (pending only since approved are deleted)
+  const totalApplications = applications.filter(app => app.role === 'ngo').length
+  const pendingApplications = applications.filter(app => app.role === 'ngo' && app.status === 'pending').length
+
   const activity = useMemo(() => {
-    if (!stats) return []
     return [
       {
-        title: 'Application Approved',
-        text: `${stats?.applications?.approved || 0} total approved applications`,
-        time: 'Live summary',
+        title: 'Applications Approved',
+        text: `${totalApproved} NGO${totalApproved !== 1 ? 's' : ''} approved and active`,
+        time: 'All time',
         dot: 'bg-emerald-400',
       },
       {
-        title: 'Urgent Request',
-        text: `${stats?.requests?.pending || 0} pending requests awaiting attention`,
-        time: 'Latest sync',
+        title: 'Pending Review',
+        text: `${pendingApplications} application${pendingApplications !== 1 ? 's' : ''} waiting for approval`,
+        time: 'Current',
         dot: 'bg-orange-300',
       },
       {
-        title: 'NGO Users',
-        text: `${stats?.users?.active || 0} active NGO users in the system`,
+        title: 'Active NGO Users',
+        text: `${approvedNgosCount} active NGO${approvedNgosCount !== 1 ? 's' : ''} in the system`,
         time: 'Current',
         dot: 'bg-cyan-300',
       },
       {
-        title: 'Applications Received',
-        text: `${stats?.applications?.total || 0} total application records`,
-        time: 'Updated',
+        title: 'Total Applications Processed',
+        text: `${totalApproved + (stats?.applications?.declined || 0)} total processed (approved + declined)`,
+        time: 'All time',
         dot: 'bg-slate-300',
       },
     ]
-  }, [stats])
+  }, [totalApproved, pendingApplications, approvedNgosCount, stats])
 
+  // Chart data based on approved NGOs from users collection
   const impactChartData = useMemo(() => {
     if (impactView === 'weekly') {
       const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -149,9 +161,10 @@ const DashboardTab = ({ setActiveTab }) => {
         const end = new Date(start)
         end.setHours(23, 59, 59, 999)
 
-        const approvedApplications = applications.filter((app) => {
-          if (app.status !== 'approved') return false
-          const date = new Date(app.approvedAt || app.updatedAt || app.createdAt)
+        // Count approved NGOs from users collection (not applications)
+        const approvedNgos = users.filter((user) => {
+          if (user.role !== 'ngo' || user.status !== 'ACTIVE') return false
+          const date = new Date(user.createdAt || user.updatedAt)
           return date >= start && date <= end
         }).length
 
@@ -161,17 +174,10 @@ const DashboardTab = ({ setActiveTab }) => {
           return date >= start && date <= end
         }).length
 
-        const activeNgoUsers = users.filter((user) => {
-          if (user.status !== 'ACTIVE') return false
-          const date = new Date(user.updatedAt || user.createdAt)
-          return date >= start && date <= end
-        }).length
-
         return {
           label: day,
-          approvedApplications,
+          approvedNgos,
           approvedRequests,
-          activeNgoUsers
         }
       })
 
@@ -185,9 +191,9 @@ const DashboardTab = ({ setActiveTab }) => {
     const year = new Date().getFullYear()
 
     return monthNames.map((month, index) => {
-      const approvedApplications = applications.filter((app) => {
-        if (app.status !== 'approved') return false
-        const date = new Date(app.approvedAt || app.updatedAt || app.createdAt)
+      const approvedNgos = users.filter((user) => {
+        if (user.role !== 'ngo' || user.status !== 'ACTIVE') return false
+        const date = new Date(user.createdAt || user.updatedAt)
         return date.getFullYear() === year && date.getMonth() === index
       }).length
 
@@ -197,31 +203,15 @@ const DashboardTab = ({ setActiveTab }) => {
         return date.getFullYear() === year && date.getMonth() === index
       }).length
 
-      const activeNgoUsers = users.filter((user) => {
-        if (user.status !== 'ACTIVE') return false
-        const date = new Date(user.updatedAt || user.createdAt)
-        return date.getFullYear() === year && date.getMonth() === index
-      }).length
-
       return {
         label: month,
-        approvedApplications,
+        approvedNgos,
         approvedRequests,
-        activeNgoUsers
       }
     })
-  }, [impactView, applications, requests, users])
+  }, [impactView, users, requests])
 
   if (loading) return <Loader />
-
-  const applicationTotal = stats?.applications?.total || 0
-  const applicationPending = stats?.applications?.pending || 0
-  const applicationApproved = stats?.applications?.approved || 0
-  const requestPending = stats?.requests?.pending || 0
-  const requestApproved = stats?.requests?.approved || 0
-  const requestDeclined = stats?.requests?.declined || 0
-  const activeUsers = stats?.users?.active || 0
-  const totalUsers = stats?.users?.total || 0
 
   return (
     <div className="mx-auto max-w-7xl space-y-8">
@@ -232,14 +222,14 @@ const DashboardTab = ({ setActiveTab }) => {
           </h2>
           <p className="mt-4 text-lg leading-8 text-slate-700">
             Your dashboard is ready. Today you have{' '}
-            <span className="font-bold text-teal-800">{applicationPending} new applications</span> and{' '}
-            <span className="font-bold text-orange-700">{requestPending} urgent logistics requests</span> awaiting your approval.
+            <span className="font-bold text-teal-800">{pendingApplications} new applications</span> and{' '}
+            <span className="font-bold text-orange-700">{stats?.requests?.pending || 0} urgent logistics requests</span> awaiting your approval.
           </p>
         </div>
 
         <div className="inline-flex items-center gap-3 self-start rounded-full bg-emerald-300 px-6 py-4 text-teal-900 shadow-sm">
           <span className="text-xl">🌿</span>
-          <span className="font-bold">{requestApproved + applicationApproved} actions completed</span>
+          <span className="font-bold">{totalApproved + (stats?.requests?.approved || 0)} actions completed</span>
         </div>
       </section>
 
@@ -247,16 +237,31 @@ const DashboardTab = ({ setActiveTab }) => {
         <div className="md:col-span-2">
           <StatCard
             title="Pending Applications"
-            value={applicationPending}
+            value={pendingApplications}
             accent="border-teal-700"
             dark
             icon={<span className="text-xl">📄</span>}
             tag="+ live"
           />
         </div>
-        <StatCard title="Approved" value={applicationApproved} accent="border-emerald-400" icon={<span className="text-xl">✅</span>} />
-        <StatCard title="Requests" value={requestPending} accent="border-orange-500" icon={<span className="text-xl">⚠️</span>} />
-        <StatCard title="Active Users" value={activeUsers} accent="border-slate-300" icon={<span className="text-xl">👥</span>} />
+        <StatCard 
+          title="Approved NGOs" 
+          value={totalApproved} 
+          accent="border-emerald-400" 
+          icon={<span className="text-xl">✅</span>} 
+        />
+        <StatCard 
+          title="Pending Requests" 
+          value={stats?.requests?.pending || 0} 
+          accent="border-orange-500" 
+          icon={<span className="text-xl">⚠️</span>} 
+        />
+        <StatCard 
+          title="Active Users" 
+          value={users.filter(u => u.status === 'ACTIVE').length} 
+          accent="border-slate-300" 
+          icon={<span className="text-xl">👥</span>} 
+        />
       </section>
 
       <section className="grid grid-cols-1 gap-8 xl:grid-cols-3">
@@ -313,9 +318,8 @@ const DashboardTab = ({ setActiveTab }) => {
                     allowDecimals={false}
                   />
                   <Tooltip cursor={false} content={<CustomTooltip />} />
-                  <Bar dataKey="approvedApplications" name="Approved Applications" radius={[10, 10, 0, 0]} fill="#317873" />
+                  <Bar dataKey="approvedNgos" name="Approved NGOs" radius={[10, 10, 0, 0]} fill="#317873" />
                   <Bar dataKey="approvedRequests" name="Approved Requests" radius={[10, 10, 0, 0]} fill="#d97706" />
-                  <Bar dataKey="activeNgoUsers" name="Active NGO Users" radius={[10, 10, 0, 0]} fill="#66ada4" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -323,34 +327,30 @@ const DashboardTab = ({ setActiveTab }) => {
             <div className="mt-6 flex flex-wrap gap-6">
               <div className="flex items-center gap-2">
                 <span className="h-3 w-3 rounded-sm bg-[#317873]" />
-                <span className="text-sm font-semibold text-slate-700">Approved Applications</span>
+                <span className="text-sm font-semibold text-slate-700">Approved NGOs</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="h-3 w-3 rounded-sm bg-[#d97706]" />
                 <span className="text-sm font-semibold text-slate-700">Approved Requests</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-sm bg-[#66ada4]" />
-                <span className="text-sm font-semibold text-slate-700">Active NGO Users</span>
               </div>
             </div>
 
             <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="rounded-[28px] bg-white p-6">
                 <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">Applications</p>
-                <p className="mt-3 text-4xl font-black text-slate-900">{applicationTotal}</p>
+                <p className="mt-3 text-4xl font-black text-slate-900">{totalApplications + totalApproved}</p>
                 <p className="mt-2 text-sm font-semibold text-emerald-700">
-                  {applicationApproved} approved / {applicationPending} pending
+                  {totalApproved} approved / {pendingApplications} pending
                 </p>
               </div>
 
               <div className="rounded-[28px] bg-white p-6">
                 <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">Requests</p>
                 <p className="mt-3 text-4xl font-black text-slate-900">
-                  {requestPending + requestApproved + requestDeclined}
+                  {(stats?.requests?.pending || 0) + (stats?.requests?.approved || 0) + (stats?.requests?.declined || 0)}
                 </p>
                 <p className="mt-2 text-sm font-semibold text-orange-700">
-                  {requestApproved} approved / {requestPending} pending
+                  {stats?.requests?.approved || 0} approved / {stats?.requests?.pending || 0} pending
                 </p>
               </div>
             </div>
@@ -426,7 +426,7 @@ const DashboardTab = ({ setActiveTab }) => {
           <div className="mt-8 rounded-[28px] bg-emerald-600 p-6 text-white">
             <h4 className="text-lg font-black">Team Snapshot</h4>
             <p className="mt-2 text-sm text-emerald-50">
-              {totalUsers} total users are registered and {activeUsers} are currently active in NGO operations.
+              {users.filter(u => u.role === 'ngo').length} total NGOs are registered and {approvedNgosCount} are currently active.
             </p>
           </div>
         </aside>

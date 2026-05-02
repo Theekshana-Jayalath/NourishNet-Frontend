@@ -209,7 +209,6 @@ const DonationApplication = () => {
         })),
       };
 
-  // Use centralized API helper which uses BASE_URL and adds auth token
   const response = await createDonationForm(payload);
   setMessage(response?.message || "Donation application submitted successfully.");
       setError("");

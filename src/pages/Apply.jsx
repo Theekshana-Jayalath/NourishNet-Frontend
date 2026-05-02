@@ -79,203 +79,436 @@ const Apply = () => {
     }
   }
 
+  const roleOptions = [
+    { id: 'donor', name: 'Donor', icon: '🤝', color: 'amber', gradient: 'from-amber-500 to-orange-600', bgLight: 'bg-amber-50', textLight: 'text-amber-700' },
+    { id: 'ngo', name: 'NGO', icon: '🌱', color: 'indigo', gradient: 'from-indigo-500 to-purple-600', bgLight: 'bg-indigo-50', textLight: 'text-indigo-700' },
+    { id: 'driver', name: 'Driver', icon: '🚚', color: 'emerald', gradient: 'from-emerald-500 to-teal-600', bgLight: 'bg-emerald-50', textLight: 'text-emerald-700' }
+  ]
+
   return (
-    <div className='min-h-screen bg-gradient-to-br from-teal-50 via-white to-teal-200 flex items-center justify-center py-12 px-4'>
-      <div className='w-full max-w-4xl mx-auto'>
-        <div className='bg-white rounded-2xl shadow-xl p-8'>
-          <div className='flex items-center justify-between mb-6'>
+    <div className='min-h-screen bg-gradient-to-br from-teal-50 via-white to-emerald-50 py-12 px-4'>
+      <div className='max-w-5xl mx-auto'>
+        
+        {/* Header Card */}
+        <div className='bg-gradient-to-r from-teal-600 to-teal-800 rounded-2xl p-8 mb-8 shadow-xl'>
+          <div className='flex items-center gap-4'>
+            <div className='w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm'>
+              <span className='text-3xl'>📝</span>
+            </div>
             <div>
-              <h2 className='text-2xl font-bold text-[#004b49]'>Create an application</h2>
-              <p className='text-sm text-gray-500'>Apply as a Donor, NGO or Driver — fields adapt to your selection.</p>
+              <h1 className='text-3xl font-bold text-white'>Join NourishNet</h1>
+              <p className='text-teal-100 mt-1'>Create an application to become a donor, NGO partner, or delivery driver</p>
             </div>
           </div>
+        </div>
 
-          {error && <div className='mb-4 p-3 rounded bg-red-50 text-red-700 border border-red-100'>{error}</div>}
-          {serverErrors && serverErrors.length > 0 && (
-            <div className='mb-4 p-3 rounded bg-red-50 text-red-700 border border-red-100'>
-              <strong className='block mb-2'>Validation details:</strong>
-              <ul className='list-disc list-inside space-y-1'>
-                {serverErrors.map((s, i) => <li key={i}>{s}</li>)}
-              </ul>
-            </div>
-          )}
-
-          {success ? (
-            <div className='py-8 text-center'>
-              <div className='mx-auto mb-4 w-20 h-20 rounded-full bg-green-50 flex items-center justify-center text-green-700 text-3xl'>✓</div>
-              <h3 className='text-xl font-semibold text-green-800 mb-2'>{success}</h3>
-              <p className='text-sm text-gray-600 mb-6'>Thanks for applying. We'll contact you at the email provided.</p>
-              <div className='flex justify-center gap-3'>
-                <button onClick={() => navigate('/')} className='px-4 py-2 rounded-md bg-white border text-gray-700'>Back to Home</button>
-              </div>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className='space-y-5'>
-              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                <div>
-                  <label className='block text-sm font-medium text-gray-600 mb-1'>Full name</label>
-                  <input placeholder='Jane Doe' value={name} onChange={e => setName(e.target.value)} className='w-full bg-white border border-gray-200 rounded-lg px-4 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#66ada4] placeholder-gray-400' required />
+        {/* Main Form Card */}
+        <div className='bg-white rounded-2xl shadow-xl overflow-hidden'>
+          <div className='p-8'>
+            
+            {/* Success State */}
+            {success ? (
+              <div className='py-12 text-center'>
+                <div className='w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center shadow-lg'>
+                  <svg className='w-12 h-12 text-white' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                    <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M5 13l4 4L19 7' />
+                  </svg>
                 </div>
-                <div>
-                  <label className='block text-sm font-medium text-gray-600 mb-1'>Email</label>
-                  <input placeholder='jane@example.org' value={email} onChange={e => setEmail(e.target.value)} type='email' className='w-full bg-white border border-gray-200 rounded-lg px-4 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#66ada4] placeholder-gray-400' required />
+                <h3 className='text-2xl font-bold text-gray-800 mb-2'>Application Submitted!</h3>
+                <p className='text-gray-500 mb-6'>Thank you for applying. We'll review your application and contact you soon.</p>
+                <div className='flex justify-center gap-4'>
+                  <button onClick={() => navigate('/')} className='px-6 py-3 rounded-xl bg-gradient-to-r from-teal-600 to-teal-700 text-white font-semibold shadow-md hover:shadow-lg transition-all'>
+                    Back to Home
+                  </button>
                 </div>
               </div>
+            ) : (
+              <form onSubmit={handleSubmit} className='space-y-6'>
+                
+                {/* Error Messages */}
+                {error && (
+                  <div className='bg-red-50 border-l-4 border-red-500 p-4 rounded-lg'>
+                    <div className='flex items-center gap-2'>
+                      <svg className='w-5 h-5 text-red-600' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                        <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' />
+                      </svg>
+                      <span className='text-red-700'>{error}</span>
+                    </div>
+                  </div>
+                )}
+                
+                {serverErrors && serverErrors.length > 0 && (
+                  <div className='bg-red-50 border-l-4 border-red-500 p-4 rounded-lg'>
+                    <p className='font-semibold text-red-700 mb-2'>Please fix the following:</p>
+                    <ul className='list-disc list-inside space-y-1'>
+                      {serverErrors.map((s, i) => <li key={i} className='text-red-600 text-sm'>{s}</li>)}
+                    </ul>
+                  </div>
+                )}
 
-              <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+                {/* Personal Information Section */}
                 <div>
-                  <label className='block text-sm font-medium text-gray-600 mb-1'>NIC</label>
-                  <input placeholder='891234567V' value={nic} onChange={e => setNic(e.target.value)} className='w-full bg-white border border-gray-200 rounded-lg px-4 py-2 shadow-sm focus:outline-none placeholder-gray-400' />
+                  <h3 className='text-lg font-semibold text-teal-800 mb-4 flex items-center gap-2'>
+                    <span className='w-1 h-6 bg-teal-500 rounded-full'></span>
+                    Personal Information
+                  </h3>
+                  <div className='grid grid-cols-1 md:grid-cols-2 gap-5'>
+                    <div>
+                      <label className='block text-sm font-medium text-gray-700 mb-1'>Full Name *</label>
+                      <input 
+                        placeholder='John Doe' 
+                        value={name} 
+                        onChange={e => setName(e.target.value)} 
+                        className='w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all'
+                        required 
+                      />
+                    </div>
+                    <div>
+                      <label className='block text-sm font-medium text-gray-700 mb-1'>Email Address *</label>
+                      <input 
+                        placeholder='john@example.com' 
+                        value={email} 
+                        onChange={e => setEmail(e.target.value)} 
+                        type='email' 
+                        className='w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all'
+                        required 
+                      />
+                    </div>
+                    <div>
+                      <label className='block text-sm font-medium text-gray-700 mb-1'>NIC / National ID</label>
+                      <input 
+                        placeholder='891234567V' 
+                        value={nic} 
+                        onChange={e => setNic(e.target.value)} 
+                        className='w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all'
+                      />
+                    </div>
+                    <div>
+                      <label className='block text-sm font-medium text-gray-700 mb-1'>Username *</label>
+                      <input 
+                        placeholder='john_doe' 
+                        value={username} 
+                        onChange={e => setUsername(e.target.value)} 
+                        className='w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all'
+                        required 
+                      />
+                    </div>
+                    <div>
+                      <label className='block text-sm font-medium text-gray-700 mb-1'>City</label>
+                      <input 
+                        placeholder='Colombo' 
+                        value={city} 
+                        onChange={e => setCity(e.target.value)} 
+                        className='w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all'
+                      />
+                    </div>
+                    <div>
+                      <label className='block text-sm font-medium text-gray-700 mb-1'>Address</label>
+                      <input 
+                        placeholder='123 Main Street' 
+                        value={address} 
+                        onChange={e => setAddress(e.target.value)} 
+                        className='w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all'
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label className='block text-sm font-medium text-gray-600 mb-1'>City</label>
-                  <input placeholder='Colombo' value={city} onChange={e => setCity(e.target.value)} className='w-full bg-white border border-gray-200 rounded-lg px-4 py-2 shadow-sm focus:outline-none placeholder-gray-400' />
-                </div>
-                <div>
-                  <label className='block text-sm font-medium text-gray-600 mb-1'>Address</label>
-                  <input placeholder='123 Galle Rd' value={address} onChange={e => setAddress(e.target.value)} className='w-full bg-white border border-gray-200 rounded-lg px-4 py-2 shadow-sm focus:outline-none placeholder-gray-400' />
-                </div>
-              </div>
 
-              <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+                {/* Password Section */}
                 <div>
-                  <label className='block text-sm font-medium text-gray-600 mb-1'>Username</label>
-                  <input placeholder='desired username' value={username} onChange={e => setUsername(e.target.value)} className='w-full bg-white border border-gray-200 rounded-lg px-4 py-2 shadow-sm focus:outline-none placeholder-gray-400' required />
+                  <h3 className='text-lg font-semibold text-teal-800 mb-4 flex items-center gap-2'>
+                    <span className='w-1 h-6 bg-teal-500 rounded-full'></span>
+                    Security
+                  </h3>
+                  <div className='grid grid-cols-1 md:grid-cols-2 gap-5'>
+                    <div>
+                      <label className='block text-sm font-medium text-gray-700 mb-1'>Password *</label>
+                      <div className='relative'>
+                        <input 
+                          placeholder='Create a password' 
+                          value={password} 
+                          onChange={e => setPassword(e.target.value)} 
+                          type={showPassword ? 'text' : 'password'} 
+                          className='w-full border border-gray-200 rounded-xl px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all'
+                          required 
+                        />
+                        <button 
+                          type='button' 
+                          onClick={() => setShowPassword(!showPassword)} 
+                          className='absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-teal-600 transition-colors'
+                        >
+                          {showPassword ? '🙈' : '👁️'}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className='block text-sm font-medium text-gray-700 mb-1'>Confirm Password *</label>
+                      <div className='relative'>
+                        <input 
+                          placeholder='Confirm your password' 
+                          value={confirmPassword} 
+                          onChange={e => setConfirmPassword(e.target.value)} 
+                          type={showConfirm ? 'text' : 'password'} 
+                          className='w-full border border-gray-200 rounded-xl px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all'
+                          required 
+                        />
+                        <button 
+                          type='button' 
+                          onClick={() => setShowConfirm(!showConfirm)} 
+                          className='absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-teal-600 transition-colors'
+                        >
+                          {showConfirm ? '🙈' : '👁️'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
+                {/* Role Selection */}
                 <div>
-                  <label className='block text-sm font-medium text-gray-600 mb-1'>Password</label>
-                  <div className='relative'>
-                    <input placeholder='Choose a strong password' value={password} onChange={e => setPassword(e.target.value)} type={showPassword ? 'text' : 'password'} className='w-full bg-white border border-gray-200 rounded-lg px-4 py-2 pr-12 shadow-sm focus:outline-none placeholder-gray-400' required />
-                    <button type='button' onClick={() => setShowPassword(s => !s)} className='absolute right-3 top-1/2 -translate-y-1/2 text-gray-500' aria-label='Toggle password visibility'>
-                      {showPassword ? 'Hide' : 'Show'}
+                  <h3 className='text-lg font-semibold text-teal-800 mb-4 flex items-center gap-2'>
+                    <span className='w-1 h-6 bg-teal-500 rounded-full'></span>
+                    Select Your Role
+                  </h3>
+                  <div className='grid grid-cols-3 gap-4'>
+                    {roleOptions.map(opt => (
+                      <button
+                        key={opt.id}
+                        type='button'
+                        onClick={() => setRole(opt.id)}
+                        className={`p-4 rounded-xl text-center transition-all transform hover:scale-105 ${
+                          role === opt.id 
+                            ? `bg-gradient-to-r ${opt.gradient} text-white shadow-lg`
+                            : `${opt.bgLight} ${opt.textLight} border-2 border-transparent hover:border-${opt.color}-300`
+                        }`}
+                      >
+                        <div className='text-3xl mb-2'>{opt.icon}</div>
+                        <div className='font-semibold'>{opt.name}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Role-specific Fields */}
+                {role === 'donor' && (
+                  <div>
+                    <h3 className='text-lg font-semibold text-teal-800 mb-4 flex items-center gap-2'>
+                      <span className='w-1 h-6 bg-amber-500 rounded-full'></span>
+                      Donor Details
+                    </h3>
+                    <div className='grid grid-cols-1 md:grid-cols-2 gap-5'>
+                      <div>
+                        <label className='block text-sm font-medium text-gray-700 mb-1'>Donor Type *</label>
+                        <select 
+                          value={donorType} 
+                          onChange={e => setDonorType(e.target.value)} 
+                          className='w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500'
+                          required
+                        >
+                          <option value='' disabled>Select donor type</option>
+                          <option value='Individual'>Individual</option>
+                          <option value='Corporate'>Corporate</option>
+                          <option value='Restaurant'>Restaurant</option>
+                          <option value='Organization'>Organization</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className='block text-sm font-medium text-gray-700 mb-1'>Contact Number *</label>
+                        <input 
+                          placeholder='+94 77 123 4567' 
+                          value={contactNumber} 
+                          onChange={e => setContactNumber(e.target.value)} 
+                          className='w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500'
+                          required 
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {role === 'ngo' && (
+                  <div>
+                    <h3 className='text-lg font-semibold text-teal-800 mb-4 flex items-center gap-2'>
+                      <span className='w-1 h-6 bg-indigo-500 rounded-full'></span>
+                      Organization Details
+                    </h3>
+                    <div className='grid grid-cols-1 md:grid-cols-3 gap-5'>
+                      <div>
+                        <label className='block text-sm font-medium text-gray-700 mb-1'>Organization Name *</label>
+                        <input 
+                          placeholder='Helping Hands Foundation' 
+                          value={organizationName} 
+                          onChange={e => setOrganizationName(e.target.value)} 
+                          className='w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500'
+                          required 
+                        />
+                      </div>
+                      <div>
+                        <label className='block text-sm font-medium text-gray-700 mb-1'>Registration Number *</label>
+                        <input 
+                          placeholder='REG-2023-001' 
+                          value={registrationNumber} 
+                          onChange={e => setRegistrationNumber(e.target.value)} 
+                          className='w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500'
+                          required 
+                        />
+                      </div>
+                      <div>
+                        <label className='block text-sm font-medium text-gray-700 mb-1'>Contact Number *</label>
+                        <input 
+                          placeholder='+94 71 234 5678' 
+                          value={contactNumber} 
+                          onChange={e => setContactNumber(e.target.value)} 
+                          className='w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500'
+                          required 
+                        />
+                      </div>
+                    </div>
+
+                    {/* Team Members Section */}
+                    <div className='mt-5'>
+                      <label className='block text-sm font-medium text-gray-700 mb-2'>Team Members (Optional)</label>
+                      <div className='space-y-3'>
+                        {members.map((m, idx) => (
+                          <div key={idx} className='grid grid-cols-1 md:grid-cols-3 gap-3 items-end'>
+                            <div>
+                              <input 
+                                value={m.name} 
+                                onChange={e => {
+                                  const copy = [...members]; 
+                                  copy[idx] = { ...copy[idx], name: e.target.value }; 
+                                  setMembers(copy)
+                                }} 
+                                className='w-full border border-gray-200 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500'
+                                placeholder='Full name' 
+                              />
+                            </div>
+                            <div>
+                              <input 
+                                value={m.contact} 
+                                onChange={e => {
+                                  const copy = [...members]; 
+                                  copy[idx] = { ...copy[idx], contact: e.target.value }; 
+                                  setMembers(copy)
+                                }} 
+                                className='w-full border border-gray-200 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500'
+                                placeholder='Phone or email' 
+                              />
+                            </div>
+                            <div className='flex gap-2'>
+                              <button 
+                                type='button' 
+                                onClick={() => {
+                                  const copy = [...members]; 
+                                  copy.splice(idx, 1); 
+                                  setMembers(copy.length ? copy : [{ name: '', contact: '' }])
+                                }} 
+                                className='px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors'
+                              >
+                                Remove
+                              </button>
+                              {idx === members.length - 1 && (
+                                <button 
+                                  type='button' 
+                                  onClick={() => setMembers([...members, { name: '', contact: '' }])} 
+                                  className='px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors'
+                                >
+                                  Add Member
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {role === 'driver' && (
+                  <div>
+                    <h3 className='text-lg font-semibold text-teal-800 mb-4 flex items-center gap-2'>
+                      <span className='w-1 h-6 bg-emerald-500 rounded-full'></span>
+                      Driver & Vehicle Details
+                    </h3>
+                    <div className='grid grid-cols-1 md:grid-cols-2 gap-5'>
+                      <div>
+                        <label className='block text-sm font-medium text-gray-700 mb-1'>Vehicle Type *</label>
+                        <input 
+                          placeholder='Van, Motorcycle, Truck' 
+                          value={vehicleType} 
+                          onChange={e => setVehicleType(e.target.value)} 
+                          className='w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500'
+                          required 
+                        />
+                      </div>
+                      <div>
+                        <label className='block text-sm font-medium text-gray-700 mb-1'>Vehicle Number *</label>
+                        <input 
+                          placeholder='ABC-1234' 
+                          value={vehicleNumber} 
+                          onChange={e => setVehicleNumber(e.target.value)} 
+                          className='w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500'
+                          required 
+                        />
+                      </div>
+                      <div>
+                        <label className='block text-sm font-medium text-gray-700 mb-1'>License Number *</label>
+                        <input 
+                          placeholder='L-123456' 
+                          value={licenseNumber} 
+                          onChange={e => setLicenseNumber(e.target.value)} 
+                          className='w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500'
+                          required 
+                        />
+                      </div>
+                      <div>
+                        <label className='block text-sm font-medium text-gray-700 mb-1'>Contact Number *</label>
+                        <input 
+                          placeholder='+94 77 345 6789' 
+                          value={contactNumber} 
+                          onChange={e => setContactNumber(e.target.value)} 
+                          className='w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500'
+                          required 
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Notes Section */}
+                <div>
+                  <label className='block text-sm font-medium text-gray-700 mb-2'>Additional Notes (Optional)</label>
+                  <textarea 
+                    value={notes} 
+                    onChange={e => setNotes(e.target.value)} 
+                    rows={4}
+                    placeholder='Any additional information you would like to share with us...'
+                    className='w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all resize-none'
+                  />
+                </div>
+
+                {/* Form Actions */}
+                <div className='flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t border-gray-100'>
+                  <p className='text-sm text-gray-500'>By submitting, you agree to our Terms of Service and Privacy Policy.</p>
+                  <div className='flex gap-3'>
+                    <button 
+                      type='button' 
+                      onClick={() => navigate('/')} 
+                      className='px-6 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-all'
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type='submit' 
+                      className='px-6 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-teal-700 text-white font-semibold shadow-md hover:shadow-lg transition-all transform hover:scale-105'
+                    >
+                      Submit Application
                     </button>
                   </div>
                 </div>
-
-                <div>
-                  <label className='block text-sm font-medium text-gray-600 mb-1'>Confirm Password</label>
-                  <div className='relative'>
-                    <input placeholder='Re-type your password' value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} type={showConfirm ? 'text' : 'password'} className='w-full bg-white border border-gray-200 rounded-lg px-4 py-2 pr-12 shadow-sm focus:outline-none placeholder-gray-400' required />
-                    <button type='button' onClick={() => setShowConfirm(s => !s)} className='absolute right-3 top-1/2 -translate-y-1/2 text-gray-500' aria-label='Toggle confirm password visibility'>
-                      {showConfirm ? 'Hide' : 'Show'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className='block text-sm font-medium text-gray-600 mb-2'>Role</label>
-                <div className='flex gap-3'>
-                  <button type='button' onClick={() => setRole('donor')} className={`px-4 py-2 rounded-lg ${role==='donor' ? 'bg-linear-to-r from-yellow-400 to-yellow-600 text-white shadow' : 'bg-yellow-50 text-yellow-700'}`}>Donor</button>
-                  <button type='button' onClick={() => setRole('ngo')} className={`px-4 py-2 rounded-lg ${role==='ngo' ? 'bg-linear-to-r from-indigo-500 to-purple-600 text-white shadow' : 'bg-indigo-50 text-indigo-700'}`}>NGO</button>
-                  <button type='button' onClick={() => setRole('driver')} className={`px-4 py-2 rounded-lg ${role==='driver' ? 'bg-linear-to-r from-emerald-500 to-teal-600 text-white shadow' : 'bg-emerald-50 text-emerald-700'}`}>Driver</button>
-                </div>
-              </div>
-
-              {role === 'donor' && (
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-600 mb-1'>Donor Type</label>
-                    <select value={donorType} onChange={e => setDonorType(e.target.value)} className='w-full bg-white border border-gray-200 rounded-lg px-4 py-2 shadow-sm placeholder-gray-400' required>
-                      <option value='' disabled>Select donor type</option>
-                      <option value='Individual'>Individual</option>
-                      <option value='Corporate'>Corporate</option>
-                      <option value='Restaurant'>Restaurant</option>
-                      <option value='Organization'>Organization</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-600 mb-1'>Contact Number</label>
-                    <input placeholder='+94 77 123 4567' value={contactNumber} onChange={e => setContactNumber(e.target.value)} className='w-full bg-white border border-gray-200 rounded-lg px-4 py-2 shadow-sm placeholder-gray-400' required={role === 'donor'} />
-                  </div>
-                </div>
-              )}
-
-              {role === 'ngo' && (
-                <>
-                  <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-                    <div>
-                      <label className='block text-sm font-medium text-gray-600 mb-1'>Organization Name</label>
-                      <input placeholder='Helping Hands' value={organizationName} onChange={e => setOrganizationName(e.target.value)} className='w-full bg-white border border-gray-200 rounded-lg px-4 py-2 shadow-sm placeholder-gray-400' required={role === 'ngo'} />
-                    </div>
-                    <div>
-                      <label className='block text-sm font-medium text-gray-600 mb-1'>Registration Number</label>
-                      <input placeholder='REG-2023-001' value={registrationNumber} onChange={e => setRegistrationNumber(e.target.value)} className='w-full bg-white border border-gray-200 rounded-lg px-4 py-2 shadow-sm placeholder-gray-400' required={role === 'ngo'} />
-                    </div>
-                    <div>
-                      <label className='block text-sm font-medium text-gray-600 mb-1'>Contact Number</label>
-                      <input placeholder='+94 71 234 5678' value={contactNumber} onChange={e => setContactNumber(e.target.value)} className='w-full bg-white border border-gray-200 rounded-lg px-4 py-2 shadow-sm placeholder-gray-400' required={role === 'ngo'} />
-                    </div>
-                  </div>
-
-                  <div className='mt-4'>
-                    <label className='block text-sm font-medium text-gray-600 mb-2'>Organization Members (optional)</label>
-                    <div className='space-y-3'>
-                      {members.map((m, idx) => (
-                        <div key={idx} className='grid grid-cols-3 gap-3 items-end'>
-                          <div>
-                            <label className='text-xs block mb-1'>Member name</label>
-                            <input value={m.name} onChange={e => {
-                              const copy = [...members]; copy[idx] = { ...copy[idx], name: e.target.value }; setMembers(copy)
-                            }} className='w-full bg-white border border-gray-200 rounded-lg px-3 py-2 placeholder-gray-400' placeholder='Full name' />
-                          </div>
-                          <div>
-                            <label className='text-xs block mb-1'>Contact</label>
-                            <input value={m.contact} onChange={e => {
-                              const copy = [...members]; copy[idx] = { ...copy[idx], contact: e.target.value }; setMembers(copy)
-                            }} className='w-full bg-white border border-gray-200 rounded-lg px-3 py-2 placeholder-gray-400' placeholder='Phone or email' />
-                          </div>
-                          <div className='flex gap-2'>
-                            <button type='button' onClick={() => {
-                              const copy = [...members]; copy.splice(idx, 1); setMembers(copy.length ? copy : [{ name: '', contact: '' }])
-                            }} className='px-3 py-2 bg-red-100 text-red-700 rounded'>Remove</button>
-                            {idx === members.length - 1 && (
-                              <button type='button' onClick={() => setMembers([...members, { name: '', contact: '' }])} className='px-3 py-2 bg-green-100 text-green-700 rounded'>Add</button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {role === 'driver' && (
-                <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-600 mb-1'>Vehicle Type</label>
-                    <input placeholder='Van, Motorcycle' value={vehicleType} onChange={e => setVehicleType(e.target.value)} className='w-full bg-white border border-gray-200 rounded-lg px-4 py-2 shadow-sm placeholder-gray-400' required={role === 'driver'} />
-                  </div>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-600 mb-1'>Vehicle Number</label>
-                    <input placeholder='ABC-1234' value={vehicleNumber} onChange={e => setVehicleNumber(e.target.value)} className='w-full bg-white border border-gray-200 rounded-lg px-4 py-2 shadow-sm placeholder-gray-400' required={role === 'driver'} />
-                  </div>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-600 mb-1'>License Number</label>
-                    <input placeholder='L-123456' value={licenseNumber} onChange={e => setLicenseNumber(e.target.value)} className='w-full bg-white border border-gray-200 rounded-lg px-4 py-2 shadow-sm placeholder-gray-400' required={role === 'driver'} />
-                  </div>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-600 mb-1'>Contact Number</label>
-                    <input placeholder='+94 77 345 6789' value={contactNumber} onChange={e => setContactNumber(e.target.value)} className='w-full bg-white border border-gray-200 rounded-lg px-4 py-2 shadow-sm placeholder-gray-400' required={role === 'driver'} />
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label className='block text-sm font-medium text-gray-600 mb-1'>Notes (optional)</label>
-                <textarea value={notes} onChange={e => setNotes(e.target.value)} className='w-full bg-white border border-gray-200 rounded-lg px-4 py-2 shadow-sm placeholder-gray-400' rows={4} />
-              </div>
-
-              <div className='flex items-center justify-between'>
-                <div className='text-sm text-gray-500'>By submitting you agree to our terms.</div>
-                <div className='flex items-center gap-3'>
-                  <button type='button' onClick={() => { /* keep form values */ navigate('/', { replace: true }) }} className='px-4 py-2 rounded-md bg-white border text-gray-700'>Cancel</button>
-                  <button type='submit' className='px-6 py-2 rounded-md bg-linear-to-r from-[#317873] to-[#66ada4] text-white font-semibold shadow'>Submit Application</button>
-                </div>
-              </div>
-            </form>
-          )}
+              </form>
+            )}
+          </div>
         </div>
       </div>
     </div>

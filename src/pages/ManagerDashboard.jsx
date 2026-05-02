@@ -6,11 +6,16 @@ import {
   CheckCircle2,
   Clock3,
   ClipboardList,
+  LayoutDashboard,
+  LogOut,
+  Menu,
   Package,
+  Search,
   Truck,
   XCircle,
 } from 'lucide-react'
 import axiosInstance from '../api/axiosInstance'
+import { getDonationForms, updateDonationForm, deleteDonationForm } from '../api'
 import AssignDriverModal from '../components/AssignDriverModal'
 
 /* ------------------------------------------------------------------ */
@@ -62,6 +67,7 @@ function toReadableDate(value) {
 /* ------------------------------------------------------------------ */
 const ManagerDashboard = () => {
   const [activeTab, setActiveTab] = useState('donations')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [donations, setDonations] = useState([])
   const [deliveries, setDeliveries] = useState([])
   const [applications, setApplications] = useState([])
@@ -69,13 +75,21 @@ const ManagerDashboard = () => {
   const [loading, setLoading] = useState(true)
   const [actionLoadingId, setActionLoadingId] = useState('')
   const [assignModal, setAssignModal] = useState({ isOpen: false, sourceType: '', sourceData: null })
+  const [searchTerm, setSearchTerm] = useState('')
+  const handleLogout = () => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    localStorage.removeItem('role')
+    window.location.href = '/login'
+  }
 
   /* ---- Data fetching -------------------------------------------- */
   const loadDashboardData = useCallback(async () => {
     setLoading(true)
     try {
       const [donationRes, deliveryRes, appRes, requestRes] = await Promise.all([
-        axiosInstance.get('/donationForms'),
+        // donation list comes from centralized helper; keep axiosInstance for other services
+        (async () => ({ data: await getDonationForms() }))(),
         axiosInstance.get('/api/deliveries', { params: { limit: 100 } }).catch(() => ({ data: [] })),
         axiosInstance.get('/api/applications').catch(() => ({ data: [] })),
         axiosInstance.get('/api/requests', { params: { limit: 50 } }).catch(() => ({ data: [] })),
@@ -175,11 +189,54 @@ const ManagerDashboard = () => {
       .slice(0, 10)
   }, [donations])
 
+  const pendingDonations = useMemo(() => {
+    return donations.filter(
+      (donation) => String(donation?.Status || '').toLowerCase() === 'pending'
+    )
+  }, [donations])
+
+  const normalizedSearch = searchTerm.trim().toLowerCase()
+  const matchesSearch = (value) => {
+    if (!normalizedSearch) return true
+    return String(value || '').toLowerCase().includes(normalizedSearch)
+  }
+
+  const filteredDonations = useMemo(() => {
+    return pendingDonations.filter((donation) => {
+      const items = (donation?.items || []).map((item) => item?.productId).join(' ')
+      return [
+        donation?.donationFormId,
+        donation?._id,
+        donation?.Status,
+        items,
+        donation?.createdAt,
+      ].some(matchesSearch)
+    })
+  }, [pendingDonations, normalizedSearch])
+
   const sortedRequests = useMemo(() => {
     return [...ngoRequests].sort(
       (a, b) => new Date(b?.createdAt || 0) - new Date(a?.createdAt || 0)
     )
   }, [ngoRequests])
+
+  const filteredRequests = useMemo(() => {
+    return sortedRequests.filter((request) => {
+      const items = (request?.requestedItems || [])
+        .map((item) => `${item?.itemName} ${item?.quantity} ${item?.unit}`)
+        .join(' ')
+      return [
+        request?.requestId,
+        request?._id,
+        request?.organizationName,
+        request?.contactPhone,
+        request?.status,
+        request?.urgencyLevel,
+        request?.location?.address,
+        items,
+      ].some(matchesSearch)
+    })
+  }, [sortedRequests, normalizedSearch])
 
   const auditTrail = useMemo(() => {
     const deliveryEvents = deliveries.flatMap((delivery) => {
@@ -189,6 +246,7 @@ const ManagerDashboard = () => {
         message:
           historyItem?.message || `${baseName} updated delivery to ${historyItem?.status}`,
         at: historyItem?.at,
+        type: 'delivery',
       }))
     })
 
@@ -196,13 +254,24 @@ const ManagerDashboard = () => {
       id: `donation-${donation?._id}`,
       message: `Donation ${donation?.donationFormId || donation?._id} is ${donation?.Status || 'Pending'}`,
       at: donation?.updatedAt || donation?.createdAt,
+      type: 'donation',
     }))
 
-    return [...deliveryEvents, ...donationEvents]
+    const requestEvents = ngoRequests.map((request) => {
+      const status = String(request?.status || 'PENDING').toUpperCase()
+      return {
+        id: `request-${request?._id}`,
+        message: `NGO Request ${request?.requestId || request?._id} is ${status}`,
+        at: request?.updatedAt || request?.createdAt,
+        type: 'ngo',
+      }
+    })
+
+    return [...deliveryEvents, ...donationEvents, ...requestEvents]
       .filter((item) => item?.at)
       .sort((a, b) => new Date(b.at) - new Date(a.at))
       .slice(0, 7)
-  }, [deliveries, donations])
+  }, [deliveries, donations, ngoRequests])
 
   /* ---- Actions -------------------------------------------------- */
   const handleApproveDonation = async (donation) => {
@@ -210,7 +279,7 @@ const ManagerDashboard = () => {
     setActionLoadingId(donation._id)
 
     try {
-      await axiosInstance.put(`/donationForms/${donation._id}`, { Status: 'Received' })
+  await updateDonationForm(donation._id, { Status: 'Received' })
       toast.success('Donation approved and moved to stock')
       await loadDashboardData()
     } catch (error) {
@@ -228,7 +297,7 @@ const ManagerDashboard = () => {
 
     setActionLoadingId(donation._id)
     try {
-      await axiosInstance.delete(`/donationForms/${donation._id}`)
+  await deleteDonationForm(donation._id)
       toast.success('Donation rejected successfully')
       await loadDashboardData()
     } catch (error) {
@@ -281,30 +350,138 @@ const ManagerDashboard = () => {
 
   /* ---- Render --------------------------------------------------- */
   return (
-    <div className='min-h-screen bg-slate-50 p-4 md:p-6'>
-      <div className='mx-auto max-w-7xl space-y-6'>
-        {/* Header */}
-        <header className='rounded-2xl border border-slate-200 bg-white p-5 shadow-sm'>
-          <div className='flex flex-wrap items-center justify-between gap-4'>
-            <div>
-              <h1 className='text-3xl font-bold tracking-tight text-teal-900'>
-                Delivery Manager Dashboard
-              </h1>
-              <p className='mt-1 text-sm text-slate-500'>
-                Real-time operations overview for donations, NGO requests, inventory, and
-                delivery flow.
-              </p>
+    <div className='min-h-screen bg-slate-50'>
+      <div className='lg:flex'>
+        <aside
+          className={`fixed inset-y-0 left-0 z-50 w-72 border-r border-teal-950 bg-teal-950 p-4 shadow-[inset_-1px_0_0_rgba(49,120,115,0.2)] transition-transform duration-300 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
+            sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+        >
+          <div className='flex h-full flex-col'>
+            <div className='rounded-2xl border border-teal-900/70 bg-white/5 p-4 shadow-sm'>
+              <div className='flex items-center gap-3'>
+                <div className='flex h-10 w-10 items-center justify-center rounded-xl bg-teal-700 text-white'>
+                  <LayoutDashboard size={18} />
+                </div>
+                <div>
+                  <p className='text-sm font-semibold text-white'>NourishNet</p>
+                  <p className='text-xs text-white/80'>Delivery Manager</p>
+                </div>
+              </div>
             </div>
 
+            <nav className='mt-6 space-y-2'>
+              <button
+                onClick={() => {
+                  setActiveTab('donations')
+                  setSidebarOpen(false)
+                }}
+                className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-medium transition-all duration-300 ${
+                  activeTab === 'donations'
+                    ? 'bg-linear-to-r from-teal-700 to-teal-500 text-white shadow-lg shadow-teal-950/30'
+                    : 'text-teal-300/70 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                <Package size={17} className={activeTab === 'donations' ? 'text-white' : 'text-teal-300/70'} />
+                Pending Donations
+              </button>
+
+              {TABS.filter((tab) => tab.id !== 'donations').map((tab) => {
+                const Icon = tab.icon
+                const active = activeTab === tab.id
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      setActiveTab(tab.id)
+                      setSidebarOpen(false)
+                    }}
+                    className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-medium transition-all duration-300 ${
+                      active
+                        ? 'bg-linear-to-r from-teal-700 to-teal-500 text-white shadow-lg shadow-teal-950/30'
+                        : 'text-teal-300/70 hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    <Icon size={17} className={active ? 'text-white' : 'text-teal-300/70'} />
+                    {tab.label}
+                    {tab.id === 'requests' && stats.pendingRequests > 0 && (
+                      <span className='ml-auto rounded-full bg-teal-200/20 px-2 py-0.5 text-xs font-bold text-teal-100'>
+                        {stats.pendingRequests}
+                      </span>
+                    )}
+                    {tab.id === 'inventory' && stats.stockLevel > 0 && (
+                      <span className='ml-auto rounded-full bg-teal-200/20 px-2 py-0.5 text-xs font-bold text-teal-100'>
+                        {stats.stockLevel}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </nav>
+
             <button
-              onClick={loadDashboardData}
-              disabled={loading}
-              className='rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60'
+              onClick={handleLogout}
+              className='mt-auto flex items-center justify-center gap-2 rounded-2xl border border-teal-700 bg-transparent px-4 py-3 text-sm font-semibold text-teal-200 transition hover:border-red-900/50 hover:bg-red-500/10 hover:text-red-300'
             >
-              {loading ? 'Refreshing...' : 'Refresh'}
+              <LogOut size={16} />
+              Logout
             </button>
           </div>
-        </header>
+        </aside>
+
+        {sidebarOpen && (
+          <button
+            className='fixed inset-0 z-40 bg-slate-900/35 lg:hidden'
+            onClick={() => setSidebarOpen(false)}
+            aria-label='Close sidebar overlay'
+          />
+        )}
+
+        <main className='min-h-screen flex-1 p-4 md:p-6'>
+          <div className='mx-auto max-w-7xl space-y-6'>
+            {/* Header */}
+            <header className='rounded-2xl border border-slate-200 bg-white p-5 shadow-sm'>
+              <div className='flex flex-wrap items-center justify-between gap-4'>
+                <div className='flex items-center gap-3'>
+                  <button
+                    onClick={() => setSidebarOpen(true)}
+                    className='rounded-xl border border-slate-200 bg-white p-2 text-teal-700 lg:hidden'
+                  >
+                    <Menu size={18} />
+                  </button>
+                  <div>
+                    <h1 className='text-3xl font-bold tracking-tight text-teal-900'>
+                      Delivery Manager Dashboard
+                    </h1>
+                    <p className='mt-1 text-sm text-slate-500'>
+                      Real-time operations overview for donations, NGO requests, inventory, and
+                      delivery flow.
+                    </p>
+                  </div>
+                </div>
+
+                <div className='flex flex-1 items-center justify-end gap-3'>
+                  <div className='relative hidden min-w-[220px] max-w-[320px] flex-1 sm:block'>
+                    <Search className='pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400' />
+                    <input
+                      type='search'
+                      placeholder='Search donations or NGO requests...'
+                      value={searchTerm}
+                      onChange={(event) => setSearchTerm(event.target.value)}
+                      className='w-full rounded-2xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm text-slate-700 outline-none transition focus:border-teal-400 focus:bg-white'
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={loadDashboardData}
+                  disabled={loading}
+                  className='rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60'
+                >
+                  {loading ? 'Refreshing...' : 'Refresh'}
+                </button>
+              </div>
+            </header>
 
         {/* Stats Row */}
         <section className='grid gap-4 sm:grid-cols-2 xl:grid-cols-5'>
@@ -377,7 +554,7 @@ const ManagerDashboard = () => {
         {activeTab === 'donations' && (
           <DonationsTab
             loading={loading}
-            donations={recentDonations}
+            donations={filteredDonations}
             actionLoadingId={actionLoadingId}
             onApprove={handleApproveDonation}
             onReject={handleRejectDonation}
@@ -388,7 +565,7 @@ const ManagerDashboard = () => {
         {activeTab === 'requests' && (
           <RequestsTab
             loading={loading}
-            requests={sortedRequests}
+            requests={filteredRequests}
             actionLoadingId={actionLoadingId}
             onApprove={handleApproveRequest}
             onReject={handleRejectRequest}
@@ -403,14 +580,16 @@ const ManagerDashboard = () => {
         {activeTab === 'audit' && (
           <AuditTab loading={loading} events={auditTrail} />
         )}
-        {/* Assign Driver Modal */}
-        <AssignDriverModal
-          isOpen={assignModal.isOpen}
-          onClose={closeAssignModal}
-          sourceType={assignModal.sourceType}
-          sourceData={assignModal.sourceData}
-          onAssigned={loadDashboardData}
-        />
+            {/* Assign Driver Modal */}
+            <AssignDriverModal
+              isOpen={assignModal.isOpen}
+              onClose={closeAssignModal}
+              sourceType={assignModal.sourceType}
+              sourceData={assignModal.sourceData}
+              onAssigned={loadDashboardData}
+            />
+          </div>
+        </main>
       </div>
     </div>
   )
@@ -425,7 +604,7 @@ function DonationsTab({ loading, donations, actionLoadingId, onApprove, onReject
   return (
     <section className='rounded-2xl border border-slate-200 bg-white shadow-sm'>
       <div className='flex items-center justify-between border-b border-slate-100 p-5'>
-        <h2 className='text-lg font-semibold text-slate-900'>Recent Donations</h2>
+        <h2 className='text-lg font-semibold text-slate-900'>Pending Donations</h2>
         <span className='text-xs font-semibold uppercase tracking-wide text-slate-400'>
           {donations.length} shown
         </span>
@@ -721,6 +900,9 @@ function InventoryTab({ loading, items }) {
 
 /* ---- Audit Tab -------------------------------------------------- */
 function AuditTab({ loading, events }) {
+  const donationEvents = events.filter((event) => event.type === 'donation')
+  const ngoEvents = events.filter((event) => event.type === 'ngo')
+
   return (
     <section className='rounded-2xl border border-slate-200 bg-white p-5 shadow-sm'>
       <div className='mb-4 flex items-center justify-between'>
@@ -735,19 +917,61 @@ function AuditTab({ loading, events }) {
           <p className='text-sm text-slate-500'>No recent system actions available.</p>
         )}
 
-        {!loading &&
-          events.map((event) => (
-            <div
-              key={event.id}
-              className='flex items-start gap-3 rounded-xl border border-slate-100 bg-slate-50 p-3'
-            >
-              <span className='mt-1 h-2.5 w-2.5 rounded-full bg-teal-500' />
-              <div>
-                <p className='text-sm font-medium text-slate-700'>{event.message}</p>
-                <p className='text-xs text-slate-500'>{toReadableDate(event.at)}</p>
+        {!loading && events.length > 0 && (
+          <div className='space-y-6'>
+            <div>
+              <div className='mb-3 flex items-center justify-between text-sm'>
+                <p className='font-semibold text-slate-800'>Donation Received</p>
+                <span className='text-xs text-slate-500'>{donationEvents.length} entries</span>
+              </div>
+              <div className='space-y-2'>
+                {donationEvents.length === 0 && (
+                  <p className='rounded-xl border border-dashed border-slate-200 bg-slate-50 p-3 text-sm text-slate-500'>
+                    No donation updates yet.
+                  </p>
+                )}
+                {donationEvents.map((event) => (
+                  <div
+                    key={event.id}
+                    className='flex items-start gap-3 rounded-xl border border-slate-100 bg-slate-50 p-3'
+                  >
+                    <span className='mt-1 h-2.5 w-2.5 rounded-full bg-emerald-500' />
+                    <div>
+                      <p className='text-sm font-medium text-slate-700'>{event.message}</p>
+                      <p className='text-xs text-slate-500'>{toReadableDate(event.at)}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
+
+            <div>
+              <div className='mb-3 flex items-center justify-between text-sm'>
+                <p className='font-semibold text-slate-800'>NGO Request Received</p>
+                <span className='text-xs text-slate-500'>{ngoEvents.length} entries</span>
+              </div>
+              <div className='space-y-2'>
+                {ngoEvents.length === 0 && (
+                  <p className='rounded-xl border border-dashed border-slate-200 bg-slate-50 p-3 text-sm text-slate-500'>
+                    No NGO request updates yet.
+                  </p>
+                )}
+                {ngoEvents.map((event) => (
+                  <div
+                    key={event.id}
+                    className='flex items-start gap-3 rounded-xl border border-slate-100 bg-slate-50 p-3'
+                  >
+                    <span className='mt-1 h-2.5 w-2.5 rounded-full bg-sky-500' />
+                    <div>
+                      <p className='text-sm font-medium text-slate-700'>{event.message}</p>
+                      <p className='text-xs text-slate-500'>{toReadableDate(event.at)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   )
