@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { Search } from "lucide-react";
+import { Search, Package, Calendar, User, AlertCircle, RefreshCw, Clock, TrendingUp } from "lucide-react";
 import axios from "../../api/axiosInstance";
+import { getDonationForms } from "../../api";
 // local images
 import riceImg from '../../assets/rice.png';
 import dhalImg from '../../assets/dhal.png';
@@ -13,20 +14,14 @@ import fishCurryImg from '../../assets/fishCurry.png';
 import chickenFriedRiceImg from '../../assets/chickenFriedRice.png';
 import eggSandwichImg from '../../assets/eggSandwich.png';
 
-// items will be loaded from backend donationForms collection
-const sampleItems = [];
-
 const FoodItemsBoard = () => {
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("All");
-
-  // (read-only) no selection or add controls in Inventory view
-  const [items, setItems] = useState(sampleItems);
+  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
 
-  // simple helper to generate an image URL based on product name using Unsplash source
   const localImageMap = [
     { keywords: ['rice'], img: riceImg },
     { keywords: ['dhal', 'dal', 'lentil'], img: dhalImg },
@@ -42,7 +37,6 @@ const FoodItemsBoard = () => {
 
   const imageForName = (name) => {
     const n = (name || '').toLowerCase();
-    // prefer longer/more specific keywords first
     const sorted = [...localImageMap].sort((a, b) => {
       const aMax = Math.max(...a.keywords.map((k) => k.length));
       const bMax = Math.max(...b.keywords.map((k) => k.length));
@@ -51,39 +45,27 @@ const FoodItemsBoard = () => {
 
     for (const entry of sorted) {
       for (const k of entry.keywords) {
-        // match whole words where possible
         try {
           const re = new RegExp(`\\b${k.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}\\b`, 'i');
           if (re.test(n)) return entry.img;
         } catch (e) {
-          // fallback to substring match if regex fails for some keyword
           if (n.includes(k)) return entry.img;
         }
       }
     }
-
-    const query = encodeURIComponent(name || 'food');
-    return `https://source.unsplash.com/featured/?${query},food`;
+    return `https://source.unsplash.com/featured/?${encodeURIComponent(name || 'food')},food`;
   };
 
   useEffect(() => {
     let mounted = true;
 
-  async function loadDonations() {
+    async function loadDonations() {
       setLoading(true);
       try {
-  const res = await axios.get('/donationForms');
-        setError(null);
-        // backend returns { count, data } — support that shape, and also support direct array
-        const payload = res.data;
-        const forms = Array.isArray(payload)
-          ? payload
-          : (payload && payload.data) || [];
+  const payload = await getDonationForms();
+  setError(null);
+        const forms = Array.isArray(payload) ? payload : (payload && payload.data) || [];
 
-        // Aggregate items by productId or name so repeated donations of the same product
-        // are shown as a single row with summed total quantity but also keep a list
-        // of per-donation entries (qty, submitDate, expireDate) so admin can see
-        // each donor's contribution separately.
         const agg = {};
 
         forms.forEach((form) => {
@@ -112,39 +94,33 @@ const FoodItemsBoard = () => {
                 unit,
                 type: form.donationType || 'Unprocessed',
                 image: imageForName(name),
-                // entries: per-donation contributions
-                entries: [
-                  {
-                    donor: donorName,
-                    qty,
-                    unit,
-                    submitDate,
-                    expireDate,
-                    formId: form._id,
-                  },
-                ],
+                entries: [{
+                  donor: donorName,
+                  qty,
+                  unit,
+                  submitDate,
+                  expireDate,
+                  formId: form._id,
+                }],
               };
             } else {
               agg[key].totalQuantity = (agg[key].totalQuantity || 0) + qty;
-              // push the specific donation entry
               agg[key].entries.push({ donor: donorName, qty, unit, submitDate, expireDate, formId: form._id });
             }
           });
         });
 
         const boardItems = Object.values(agg).map((it) => {
-          // sort entries by submitDate (earliest first)
           it.entries = (it.entries || []).sort((a, b) => {
             if (!a.submitDate) return 1;
             if (!b.submitDate) return -1;
-            return new Date(a.submitDate) - new Date(b.submitDate);
+            return new Date(b.submitDate) - new Date(a.submitDate);
           });
           return it;
         });
 
-  if (mounted) setItems(boardItems);
+        if (mounted) setItems(boardItems);
       } catch (err) {
-        // fallback: keep items empty and log for debugging
         console.error('Failed to load donation forms', err);
         setError(err.message || String(err));
         setItems([]);
@@ -161,116 +137,228 @@ const FoodItemsBoard = () => {
   }, [reloadKey]);
 
   const filteredItems = items.filter((item) => {
-    const matchSearch = item.name
-      .toLowerCase()
-      .includes(search.toLowerCase());
-
-    const matchType =
-      filterType === "All" || item.type === filterType;
-
-  return matchSearch && matchType;
+    const matchSearch = item.name.toLowerCase().includes(search.toLowerCase());
+    const matchType = filterType === "All" || item.type === filterType;
+    return matchSearch && matchType;
   });
 
-  return (
-    <div className="p-6 bg-teal-50 rounded-3xl shadow-lg">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-teal-900">
-          Available Food Items
-        </h1>
+  const getTypeBadge = (type) => {
+    const normalized = (type || 'Unprocessed').toLowerCase();
+    if (normalized === 'processed') {
+      return 'bg-green-100 text-green-700';
+    }
+    return 'bg-amber-100 text-amber-700';
+  };
 
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-3 text-teal-500" />
-          <input
-            type="text"
-            placeholder="Search items..."
-            className="pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+  const isExpiringSoon = (expireDate) => {
+    if (!expireDate) return false;
+    const today = new Date();
+    const expire = new Date(expireDate);
+    const diffDays = Math.ceil((expire - today) / (1000 * 60 * 60 * 24));
+    return diffDays <= 7 && diffDays > 0;
+  };
+
+  const formatDate = (date) => {
+    if (!date) return '—';
+    return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  return (
+    <div className="p-6 bg-gray-50 min-h-screen">
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-teal-900">Food Inventory</h1>
+          <p className="text-slate-500 text-sm mt-1">Manage donated food items</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
+            <input
+              type="text"
+              placeholder="Search items..."
+              className="pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-300 focus:border-teal-300 w-64 bg-white"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <button
+            onClick={() => setReloadKey(k => k + 1)}
+            className="p-2 rounded-lg border border-slate-200 bg-white text-teal-600 hover:bg-teal-50 transition-colors"
+          >
+            <RefreshCw size={18} />
+          </button>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex gap-4 mb-6">
-        <select
-          className="border rounded-lg px-4 py-2"
-          onChange={(e) => setFilterType(e.target.value)}
-        >
-          <option value="All">All</option>
-          <option value="Processed">Processed</option>
-          <option value="Unprocessed">Unprocessed</option>
-        </select>
-
-  {/* date filter removed per request */}
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+        <div className="flex gap-2">
+          {['All', 'Processed', 'Unprocessed'].map((type) => (
+            <button
+              key={type}
+              onClick={() => setFilterType(type)}
+              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                filterType === type
+                  ? 'bg-teal-600 text-white'
+                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              {type}
+            </button>
+          ))}
+        </div>
+        <div className="text-sm text-slate-500">
+          {filteredItems.length} item{filteredItems.length !== 1 ? 's' : ''} found
+        </div>
       </div>
 
-      {/* Items Grid */}
-      {loading && <div className="text-sm text-gray-600 mb-4">Loading donations…</div>}
-      {error && (
-        <div className="text-sm text-red-600 mb-4">
-          Failed to load donations: {error}. <button className="underline" onClick={() => {
-            setError(null); setItems([]); setReloadKey(k => k + 1);
-          }}>Retry</button>
+      {/* Loading */}
+      {loading && (
+        <div className="flex items-center justify-center py-16">
+          <div className="inline-flex items-center gap-2 text-slate-500">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-teal-500 border-t-transparent"></div>
+            <span>Loading inventory...</span>
+          </div>
         </div>
       )}
-  {/* debug payload removed */}
-      <div className="overflow-x-auto bg-white rounded-lg shadow">
-        <table className="w-full table-auto">
-          <thead className="bg-teal-50 text-left">
-            <tr>
-              <th className="px-4 py-3">Product</th>
-              <th className="px-4 py-3">Category</th>
-              <th className="px-4 py-3">Unit</th>
-              <th className="px-4 py-3">Total Quantity</th>
-              <th className="px-4 py-3">Donations (qty / submit / expire)</th>
-            </tr>
-          </thead>
 
-          <tbody>
-            {filteredItems.map((item) => (
-              <tr key={item.id} className="border-t">
-                <td className="px-4 py-3 align-top">
-                  <div className="flex items-center gap-3">
-                    <img src={item.image} alt={item.name} className="w-16 h-12 object-cover rounded" />
-                    <div>
-                      <div className="font-semibold text-teal-900">{item.name}</div>
-                      <div className="text-sm text-gray-500">{item.description}</div>
-                    </div>
-                  </div>
-                </td>
+      {/* Error */}
+      {error && (
+        <div className="mb-4 rounded-lg bg-red-50 p-4 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-red-600 text-sm">
+            <AlertCircle size={18} />
+            <span>{error}</span>
+          </div>
+          <button
+            onClick={() => { setError(null); setReloadKey(k => k + 1); }}
+            className="px-3 py-1 rounded-md bg-red-100 text-red-700 text-sm hover:bg-red-200"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
-                <td className="px-4 py-3 align-top">
-                  <div className="text-sm">{item.type || 'Unprocessed'}</div>
-                </td>
-
-                <td className="px-4 py-3 align-top">{item.unit || 'pcs'}</td>
-
-                <td className="px-4 py-3 align-top font-semibold">{item.totalQuantity || 0}</td>
-
-                <td className="px-4 py-3 align-top">
-                  <div className="space-y-2">
-                    {(item.entries || []).map((e, idx) => (
-                      <div key={idx} className="text-sm border rounded px-3 py-2 bg-gray-50">
-                        <div className="text-sm">
-                          <span className="font-semibold">{e.qty}</span> {e.unit}
-                          {e.donor ? <span className="ml-2 text-gray-600">by {e.donor}</span> : null}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          <span>Submitted: {e.submitDate ? new Date(e.submitDate).toLocaleDateString() : '—'}</span>
-                          <span className="mx-2">|</span>
-                          <span>Expire: {e.expireDate ? new Date(e.expireDate).toLocaleDateString() : '—'}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </td>
+      {/* Items Table */}
+      {!loading && (
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Product</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Category</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Unit</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Qty</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Donation History</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredItems.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-5 py-16 text-center text-slate-400">
+                    <Package size={40} className="mx-auto mb-2 text-slate-300" />
+                    <p>No food items found</p>
+                  </td>
+                </tr>
+              )}
+              {filteredItems.map((item) => (
+                <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                  {/* Product */}
+                  <td className="px-5 py-4">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="w-12 h-12 rounded-lg object-cover border border-slate-100"
+                        onError={(e) => { e.target.src = 'https://via.placeholder.com/48x48?text=Food'; }}
+                      />
+                      <div>
+                        <div className="font-medium text-slate-800">{item.name}</div>
+                        {item.description && (
+                          <div className="text-xs text-slate-400 truncate max-w-[180px]">{item.description}</div>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* Category */}
+                  <td className="px-5 py-4">
+                    <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${getTypeBadge(item.type)}`}>
+                      {item.type || 'Unprocessed'}
+                    </span>
+                  </td>
+
+                  {/* Unit */}
+                  <td className="px-5 py-4 text-sm text-slate-600">{item.unit || 'pcs'}</td>
+
+                  {/* Total Quantity */}
+                  <td className="px-5 py-4">
+                    <span className="inline-flex items-center justify-center min-w-[60px] bg-teal-50 text-teal-700 font-semibold px-2 py-1 rounded-lg text-sm">
+                      {item.totalQuantity || 0}
+                    </span>
+                  </td>
+
+                  {/* Donation History - compact list */}
+                  <td className="px-5 py-4">
+                    <div className="space-y-1.5">
+                      {(item.entries || []).slice(0, 3).map((entry, idx) => (
+                        <div key={idx} className="flex flex-wrap items-center gap-2 text-xs">
+                          <span className="font-semibold text-teal-600 min-w-[50px]">{entry.qty} {entry.unit}</span>
+                          {entry.donor && (
+                            <span className="text-slate-400 flex items-center gap-0.5">
+                              <User size={10} /> {entry.donor.split(' ')[0]}
+                            </span>
+                          )}
+                          <span className="text-slate-400">•</span>
+                          <span className="text-slate-500">Submitted: {formatDate(entry.submitDate)}</span>
+                          <span className="text-slate-400">•</span>
+                          <span className={`${isExpiringSoon(entry.expireDate) ? 'text-amber-600 font-medium' : 'text-slate-500'}`}>
+                            Expires: {formatDate(entry.expireDate)}
+                            {isExpiringSoon(entry.expireDate) && <span className="ml-1 text-amber-600">⚠️</span>}
+                          </span>
+                        </div>
+                      ))}
+                      {(item.entries || []).length > 3 && (
+                        <div className="text-xs text-teal-500 mt-1">
+                          + {(item.entries.length - 3)} more donation{(item.entries.length - 3) !== 1 ? 's' : ''}
+                        </div>
+                      )}
+                      {(!item.entries || item.entries.length === 0) && (
+                        <div className="text-xs text-slate-400 italic">No donations</div>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Summary */}
+      {!loading && items.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 px-2 py-2">
+          <div className="flex items-center gap-4">
+            <span className="flex items-center gap-1">
+              <TrendingUp size={14} />
+              Total items: {items.length}
+            </span>
+            <span>
+              Total quantity: {items.reduce((sum, item) => sum + (item.totalQuantity || 0), 0)} units
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="inline-flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+              Expiring soon
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-teal-500"></span>
+              Good stock
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -7,6 +7,7 @@ import {
   X,
 } from 'lucide-react'
 import axiosInstance from '../api/axiosInstance'
+import { updateDonationForm } from '../api'
 import toast from 'react-hot-toast'
 
 /**
@@ -136,9 +137,7 @@ export default function AssignDriverModal({
       // Step 4: Update source status
       if (sourceType === 'donation' && sourceData?._id) {
         // Mark donation as Received (enters inventory pipeline)
-        await axiosInstance
-          .put(`/donationForms/${sourceData._id}`, { Status: 'Received' })
-          .catch(() => {})
+        await updateDonationForm(sourceData._id, { Status: 'Received' }).catch(() => {})
       }
 
       if (sourceType === 'request' && sourceData?._id) {

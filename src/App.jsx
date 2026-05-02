@@ -21,6 +21,7 @@ import NgoManagerDashboard from './pages/ngoManager/NgoManagerDashboard'
 import About from './pages/About'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import TermsConditions from './pages/TermsConditions'
+import DonorManagerDashboard from './pages/donorManager/DonorManagerDashboard'
 
 const App = () => {
   return (
@@ -76,7 +77,8 @@ function Main() {
         <Route path='/ngo-dashboard' element={<NgoDashboard />} />
         <Route path='/driver-dashboard' element={<DriverDashboard />} />
         <Route path='/ngo-manager-dashboard' element={<NgoManagerDashboard />} />
-        <Route path='/driver-manager-dashboard' element={<DriverDashboard />} />
+        <Route path='/driver-manager-dashboard' element={<ManagerDashboard />} />
+        <Route path='/donor-manager-dashboard/*' element={<DonorManagerDashboard />} />
       </Routes>
 
       {!shouldHideFooter && <Footer />}

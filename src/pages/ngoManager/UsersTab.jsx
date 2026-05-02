@@ -16,6 +16,14 @@ const UsersTab = () => {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [actionLoading, setActionLoading] = useState('')
+  const [showConfirmModal, setShowConfirmModal] = useState(null)
+  const [confirmAction, setConfirmAction] = useState(null)
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' })
+
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type })
+    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000)
+  }
 
   const fetchUsers = useCallback(async () => {
     setLoading(true)
@@ -28,6 +36,7 @@ const UsersTab = () => {
     } catch (err) {
       console.error(err)
       setUsers([])
+      showToast('Failed to fetch users', 'error')
     } finally {
       setLoading(false)
     }
@@ -53,8 +62,7 @@ const UsersTab = () => {
 
   const toggleStatus = async (id, currentStatus) => {
     const newStatus = currentStatus === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
-    if (!window.confirm(`${newStatus === 'ACTIVE' ? 'Activate' : 'Deactivate'} this user?`)) return
-
+    
     setActionLoading(id)
 
     try {
@@ -66,21 +74,107 @@ const UsersTab = () => {
       const data = await parseJsonSafe(res)
 
       if (!res.ok) {
-        alert(data.message || 'Failed to update user status')
+        showToast(data.message || 'Failed to update user status', 'error')
         return
       }
 
+      showToast(`User ${newStatus === 'ACTIVE' ? 'activated' : 'deactivated'} successfully`, 'success')
       fetchUsers()
+      setShowConfirmModal(null)
+      setConfirmAction(null)
     } catch (err) {
       console.error(err)
-      alert('Network error')
+      showToast('Network error', 'error')
     } finally {
       setActionLoading('')
     }
   }
 
+  const openConfirmModal = (id, currentStatus) => {
+    const action = currentStatus === 'ACTIVE' ? 'deactivate' : 'activate'
+    setConfirmAction({ id, currentStatus, action })
+    setShowConfirmModal(true)
+  }
+
   return (
     <div className="mx-auto max-w-7xl space-y-8">
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className="fixed top-5 right-5 z-50 animate-in slide-in-from-top-2 fade-in duration-300">
+          <div className={`rounded-2xl px-6 py-4 shadow-lg ${
+            toast.type === 'success' 
+              ? 'bg-teal-800 text-white' 
+              : 'bg-rose-600 text-white'
+          }`}>
+            <div className="flex items-center gap-3">
+              {toast.type === 'success' ? (
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              ) : (
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              )}
+              <span className="font-semibold">{toast.message}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Action Modal */}
+      {showConfirmModal && confirmAction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center gap-3">
+              <div className={`flex h-12 w-12 items-center justify-center rounded-full ${
+                confirmAction.action === 'deactivate' ? 'bg-rose-100' : 'bg-teal-100'
+              }`}>
+                {confirmAction.action === 'deactivate' ? (
+                  <svg className="h-6 w-6 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                  </svg>
+                ) : (
+                  <svg className="h-6 w-6 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </div>
+              <h3 className="text-xl font-bold text-slate-900">
+                {confirmAction.action === 'deactivate' ? 'Deactivate User' : 'Activate User'}
+              </h3>
+            </div>
+            <p className="mb-6 text-slate-600">
+              {confirmAction.action === 'deactivate' 
+                ? 'Are you sure you want to deactivate this user? They will lose access to the platform until reactivated.'
+                : 'Are you sure you want to activate this user? They will regain full access to the platform.'}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => toggleStatus(confirmAction.id, confirmAction.currentStatus)}
+                disabled={actionLoading === confirmAction.id}
+                className={`flex-1 rounded-xl px-4 py-2 font-semibold text-white disabled:opacity-60 ${
+                  confirmAction.action === 'deactivate' ? 'bg-rose-600' : 'bg-teal-800'
+                }`}
+              >
+                {actionLoading === confirmAction.id 
+                  ? 'Processing...' 
+                  : confirmAction.action === 'deactivate' ? 'Deactivate' : 'Activate'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowConfirmModal(false)
+                  setConfirmAction(null)
+                }}
+                className="flex-1 rounded-xl bg-slate-100 px-4 py-2 font-semibold text-slate-700"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <section className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h2 className="text-4xl font-black tracking-tight text-slate-900">NGO Community</h2>
@@ -223,17 +317,17 @@ const UsersTab = () => {
                       <td className="px-6 py-5 text-right">
                         <button
                           disabled={actionLoading === user._id}
-                          onClick={() => toggleStatus(user._id, user.status)}
+                          onClick={() => openConfirmModal(user._id, user.status)}
                           className={`rounded-full px-5 py-2 text-sm font-semibold disabled:opacity-60 ${
                             user.status === 'ACTIVE'
-                              ? 'bg-rose-50 text-rose-700'
-                              : 'bg-teal-50 text-teal-700'
-                          }`}
+                              ? 'bg-rose-50 text-rose-700 hover:bg-rose-100'
+                              : 'bg-teal-50 text-teal-700 hover:bg-teal-100'
+                          } transition-colors`}
                         >
                           {user.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
                         </button>
-                      </td>
-                    </tr>
+                       </td>
+                     </tr>
                   ))}
                 </tbody>
               </table>

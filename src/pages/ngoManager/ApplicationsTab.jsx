@@ -21,6 +21,13 @@ const ApplicationsTab = () => {
   const [actionLoading, setActionLoading] = useState('')
   const [declineReason, setDeclineReason] = useState('')
   const [showDeclineModal, setShowDeclineModal] = useState(null)
+  const [showConfirmModal, setShowConfirmModal] = useState(null)
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' })
+
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type })
+    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000)
+  }
 
   const fetchApplications = useCallback(async () => {
     setLoading(true)
@@ -33,6 +40,7 @@ const ApplicationsTab = () => {
     } catch (err) {
       console.error(err)
       setApplications([])
+      showToast('Failed to fetch applications', 'error')
     } finally {
       setLoading(false)
     }
@@ -57,7 +65,6 @@ const ApplicationsTab = () => {
   const declinedCount = applications.filter((a) => (a.status || '').toLowerCase() === 'declined').length
 
   const handleApprove = async (id) => {
-    if (!window.confirm('Approve this application? A user account will be created.')) return
     setActionLoading(id)
 
     try {
@@ -68,16 +75,17 @@ const ApplicationsTab = () => {
       const data = await parseJsonSafe(res)
 
       if (!res.ok) {
-        alert(data.message || 'Failed to approve application')
+        showToast(data.message || 'Failed to approve application', 'error')
         return
       }
 
-      alert(data.message || 'Application approved')
+      showToast(data.message || 'Application approved successfully', 'success')
       fetchApplications()
       setSelectedApp(null)
+      setShowConfirmModal(null)
     } catch (err) {
       console.error(err)
-      alert('Network error')
+      showToast('Network error. Please try again.', 'error')
     } finally {
       setActionLoading('')
     }
@@ -95,25 +103,111 @@ const ApplicationsTab = () => {
       const data = await parseJsonSafe(res)
 
       if (!res.ok) {
-        alert(data.message || 'Failed to decline application')
+        showToast(data.message || 'Failed to decline application', 'error')
         return
       }
 
-      alert(data.message || 'Application declined')
+      showToast(data.message || 'Application declined successfully', 'success')
       fetchApplications()
       setSelectedApp(null)
       setShowDeclineModal(null)
       setDeclineReason('')
     } catch (err) {
       console.error(err)
-      alert('Network error')
+      showToast('Network error. Please try again.', 'error')
     } finally {
       setActionLoading('')
     }
   }
 
+  // Helper function to format member display
+  const formatMemberDisplay = (member) => {
+    if (typeof member === 'string') {
+      try {
+        const parsed = JSON.parse(member)
+        if (parsed.name && parsed.contact) {
+          return `${parsed.name} — ${parsed.contact}`
+        }
+        return member
+      } catch {
+        return member
+      }
+    }
+    if (member && typeof member === 'object') {
+      if (member.name && member.contact) {
+        return `${member.name} — ${member.contact}`
+      }
+      if (member.name) {
+        return member.name
+      }
+      if (member.contact) {
+        return member.contact
+      }
+      return JSON.stringify(member)
+    }
+    return String(member)
+  }
+
   return (
     <div className="mx-auto max-w-7xl space-y-8">
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className="fixed top-5 right-5 z-50 animate-in slide-in-from-top-2 fade-in duration-300">
+          <div className={`rounded-2xl px-6 py-4 shadow-lg ${
+            toast.type === 'success' 
+              ? 'bg-teal-800 text-white' 
+              : 'bg-rose-600 text-white'
+          }`}>
+            <div className="flex items-center gap-3">
+              {toast.type === 'success' ? (
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              ) : (
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              )}
+              <span className="font-semibold">{toast.message}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Approval Modal */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
+                <svg className="h-6 w-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-slate-900">Confirm Approval</h3>
+            </div>
+            <p className="mb-6 text-slate-600">
+              Approve this application? A user account will be created for this NGO.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleApprove(showConfirmModal)}
+                disabled={actionLoading === showConfirmModal}
+                className="flex-1 rounded-xl bg-teal-800 px-4 py-2 font-semibold text-white disabled:opacity-60"
+              >
+                {actionLoading === showConfirmModal ? 'Approving...' : 'Approve'}
+              </button>
+              <button
+                onClick={() => setShowConfirmModal(null)}
+                className="flex-1 rounded-xl bg-slate-100 px-4 py-2 font-semibold text-slate-700"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <section className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h2 className="text-4xl font-black tracking-tight text-slate-900">Applications Registry</h2>
@@ -237,7 +331,7 @@ const ApplicationsTab = () => {
                       <>
                         <button
                           disabled={actionLoading === app._id}
-                          onClick={() => handleApprove(app._id)}
+                          onClick={() => setShowConfirmModal(app._id)}
                           className="inline-flex items-center gap-2 rounded-full bg-teal-800 px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
                         >
                           {Icons.check}
@@ -294,9 +388,14 @@ const ApplicationsTab = () => {
             {selectedApp.members && selectedApp.members.length > 0 && (
               <div>
                 <p className="mb-2 font-bold text-slate-800">Members</p>
-                <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
+                <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700 space-y-2">
                   {selectedApp.members.map((m, i) => (
-                    <div key={i}>{typeof m === 'string' ? m : JSON.stringify(m)}</div>
+                    <div key={i} className="flex items-center gap-2 border-b border-slate-200 pb-2 last:border-0">
+                      <svg className="h-4 w-4 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      <span className="font-medium">{formatMemberDisplay(m)}</span>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -305,7 +404,10 @@ const ApplicationsTab = () => {
             {(selectedApp.status || '').toLowerCase() === 'pending' && (
               <div className="flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row">
                 <button
-                  onClick={() => handleApprove(selectedApp._id)}
+                  onClick={() => {
+                    setShowConfirmModal(selectedApp._id)
+                    setSelectedApp(null)
+                  }}
                   disabled={actionLoading === selectedApp._id}
                   className="flex-1 rounded-2xl bg-teal-800 px-5 py-3 font-semibold text-white disabled:opacity-60"
                 >

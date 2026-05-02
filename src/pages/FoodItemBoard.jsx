@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Search, PlusCircle } from "lucide-react";
-import axios from "../api/axiosInstance";
+import { getDonationForms } from "../api";
 
 // local images
 import riceImg from "../assets/rice.png";
@@ -31,6 +31,8 @@ const FoodItemsBoard = ({ onSelectItem, selectedItems = [] }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
+  // local optimistic quantities added from this component (id -> qty)
+  const [localAdded, setLocalAdded] = useState({});
 
   const localImageMap = [
     { keywords: ["rice"], img: riceImg },
@@ -78,11 +80,10 @@ const FoodItemsBoard = ({ onSelectItem, selectedItems = [] }) => {
     async function loadDonations() {
       setLoading(true);
       try {
-        const res = await axios.get("/donationForms");
+        // use centralized helper which calls the configured backend BASE_URL
+        const payload = await getDonationForms();
         setError(null);
-
-        const payload = res.data;
-        const forms = Array.isArray(payload) ? payload : (payload && payload.data) || [];
+  const forms = Array.isArray(payload) ? payload : (payload && payload.data) || [];
 
         const agg = {};
 
@@ -173,6 +174,19 @@ const FoodItemsBoard = ({ onSelectItem, selectedItems = [] }) => {
     return found ? Number(found.quantity || 0) : 0;
   };
 
+  // compute available quantity for a given item id/name
+  const availableFor = (item) => {
+    const base = Number(item.quantity || 0);
+    const parentSelected = getSelectedQuantityFromParent(item.name || item.id || '');
+    const locallyAdded = Number(localAdded[item.id] || 0);
+    return Math.max(0, base - parentSelected - locallyAdded);
+  };
+
+  // when parent selectedItems changes, clear optimistic local additions to avoid double-counting
+  useEffect(() => {
+    setLocalAdded({});
+  }, [selectedItems]);
+
   return (
     <div className="p-6 bg-teal-50 rounded-3xl shadow-lg">
       <div className="flex justify-between items-center mb-6">
@@ -242,7 +256,7 @@ const FoodItemsBoard = ({ onSelectItem, selectedItems = [] }) => {
 
                 <div className="mt-3 space-y-1 text-sm">
                   <p>
-                    <span className="font-semibold">Quantity:</span> {item.quantity} {item.unit}
+                    <span className="font-semibold">Quantity:</span> {availableFor(item)} {item.unit}
                   </p>
 
                   <p>
@@ -258,16 +272,22 @@ const FoodItemsBoard = ({ onSelectItem, selectedItems = [] }) => {
                 </div>
 
                 <div className="mt-4">
-                  <button
-                    className="w-full flex items-center justify-center gap-2 bg-teal-700 hover:bg-teal-900 text-white py-2 rounded-lg"
-                    onClick={() => {
-                      setSelectedItemId(item.id);
-                      setSelectedQty(1);
-                    }}
-                  >
-                    <PlusCircle size={18} />
-                    Add
-                  </button>
+                  {availableFor(item) > 0 ? (
+                    <button
+                      className="w-full flex items-center justify-center gap-2 bg-teal-700 hover:bg-teal-900 text-white py-2 rounded-lg"
+                      onClick={() => {
+                        setSelectedItemId(item.id);
+                        setSelectedQty(1);
+                      }}
+                    >
+                      <PlusCircle size={18} />
+                      Add
+                    </button>
+                  ) : (
+                    <button className="w-full flex items-center justify-center gap-2 bg-gray-200 text-gray-600 py-2 rounded-lg" disabled>
+                      Out of stock
+                    </button>
+                  )}
 
                   {selectedItemId === item.id && (
                     <div className="mt-3 flex items-center gap-2">
@@ -276,16 +296,22 @@ const FoodItemsBoard = ({ onSelectItem, selectedItems = [] }) => {
                         value={selectedQty}
                         onChange={(e) => setSelectedQty(Number(e.target.value))}
                       >
-                        {Array.from({ length: item.quantity }, (_, i) => i + 1).map((n) => (
-                          <option key={n} value={n}>
-                            {n}
-                          </option>
-                        ))}
+                        {Array.from({ length: Math.max(1, availableFor(item)) }, (_, i) => i + 1)
+                          .slice(0, availableFor(item))
+                          .map((n) => (
+                            <option key={n} value={n}>
+                              {n}
+                            </option>
+                          ))}
                       </select>
 
                       <button
                         className="bg-green-600 hover:bg-green-800 text-white px-4 py-2 rounded-lg"
                         onClick={() => {
+                          // prevent confirming if nothing available
+                          const available = availableFor(item);
+                          if (available <= 0) return;
+
                           onSelectItem?.({
                             id: item.id,
                             name: item.name,
@@ -294,8 +320,14 @@ const FoodItemsBoard = ({ onSelectItem, selectedItems = [] }) => {
                             type: item.type,
                             description: item.description,
                             image: item.image,
-                            maxAvailable: item.quantity,
+                            maxAvailable: available,
                           });
+
+                          // optimistic local update until parent reflects change
+                          setLocalAdded((prev) => ({
+                            ...prev,
+                            [item.id]: (prev[item.id] || 0) + Number(selectedQty),
+                          }));
 
                           setMessages((prev) => ({
                             ...prev,

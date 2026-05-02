@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, Routes, Route, Navigate, useNavigate } from "react-router-dom";
-import { getUser, getToken, getDonationForms, getMyPendingDonations, getMyDonationHistory } from "../../api";
+import { getUser, getToken, BASE_URL, getDonationForms, getMyPendingDonations, getMyDonationHistory } from "../../api";
 import donorBg from "../../assets/donor-bg.png";
 import DonationApplication from "./DonationApplication";
 import DonorHistory from "./DonorHistory";
@@ -64,7 +64,7 @@ function DonorDashboardHome({ user, sidebarOpen, setSidebarOpen }) {
           }
 
           try {
-            const publicData = await getDonationForms().catch(() => ({}));
+            const publicData = await getDonationForms().catch(() => ({ data: [] }));
             const list = (publicData.data || publicData || []).filter(Boolean);
             const normalized = Array.isArray(list) ? list : [list];
 
@@ -92,27 +92,15 @@ function DonorDashboardHome({ user, sidebarOpen, setSidebarOpen }) {
         }
 
         // Load pending and received donations in parallel
-        // protected endpoints: use helpers which include auth header from local token
+        const headers = { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) };
         const [pendingData, receivedData] = await Promise.all([
-          getMyPendingDonations().catch((e) => ({ data: [] , message: e.message })),
-          getMyDonationHistory().catch((e) => ({ data: [] , message: e.message })),
+          getMyPendingDonations().catch(() => ({ data: [] })),
+          getMyDonationHistory().catch(() => ({ data: [] })),
         ]);
 
-        if (pendingData.message && pendingData.message.toLowerCase().includes('unauthorized')) {
-          setError(pendingData.message || 'Access denied. Please login.');
-          setPendingDonations([]);
-          setReceivedDonations([]);
-          setLoading(false);
-          return;
-        }
-
-        setPendingDonations(pendingData.data || []);
-        if (receivedData.message && receivedData.message.toLowerCase().includes('unauthorized')) {
-          setError(receivedData.message || 'Access denied to history.');
-          setReceivedDonations([]);
-        } else {
-          setReceivedDonations(receivedData.data || []);
-        }
+        // pendingData / receivedData are expected as { data: [...] } or array directly from helper
+        setPendingDonations(pendingData?.data || pendingData || []);
+        setReceivedDonations(receivedData?.data || receivedData || []);
       } catch (err) {
         setError(err.message || "Network error");
       } finally {

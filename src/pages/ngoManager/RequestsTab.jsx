@@ -1,4 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import FullCalendar from '@fullcalendar/react'
+import dayGridPlugin from '@fullcalendar/daygrid'
+import interactionPlugin from '@fullcalendar/interaction'
 import {
   API,
   authHeaders,
@@ -21,6 +24,13 @@ const RequestsTab = () => {
   const [actionLoading, setActionLoading] = useState('')
   const [declineReason, setDeclineReason] = useState('')
   const [showDeclineModal, setShowDeclineModal] = useState(null)
+  const [showCalendar, setShowCalendar] = useState(false)
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' })
+
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type })
+    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000)
+  }
 
   const fetchRequests = useCallback(async () => {
     setLoading(true)
@@ -33,6 +43,7 @@ const RequestsTab = () => {
     } catch (err) {
       console.error(err)
       setRequests([])
+      showToast('Failed to fetch requests', 'error')
     } finally {
       setLoading(false)
     }
@@ -55,8 +66,95 @@ const RequestsTab = () => {
   const approvedCount = requests.filter((r) => (r.status || '').toUpperCase() === 'APPROVED').length
   const declinedCount = requests.filter((r) => (r.status || '').toUpperCase() === 'DECLINED').length
 
+  // Prepare calendar events from requests with neededBefore dates
+  const calendarEvents = useMemo(() => {
+    const events = []
+    requests.forEach((req) => {
+      if (req.neededBefore) {
+        const neededDate = new Date(req.neededBefore)
+        if (!isNaN(neededDate.getTime())) {
+          let color = ''
+          let textColor = ''
+          
+          // Color coding based on urgency and status
+          if (req.status === 'APPROVED') {
+            color = '#10b981' // Emerald green for approved
+            textColor = '#ffffff'
+          } else if (req.status === 'DECLINED') {
+            color = '#ef4444' // Red for declined
+            textColor = '#ffffff'
+          } else {
+            // Pending - color based on urgency
+            switch (req.urgencyLevel?.toUpperCase()) {
+              case 'HIGH':
+                color = '#ef4444' // Red for high urgency
+                textColor = '#ffffff'
+                break
+              case 'MEDIUM':
+                color = '#f59e0b' // Orange for medium urgency
+                textColor = '#ffffff'
+                break
+              case 'LOW':
+                color = '#10b981' // Green for low urgency
+                textColor = '#ffffff'
+                break
+              default:
+                color = '#6b7280' // Gray for unknown
+                textColor = '#ffffff'
+            }
+          }
+          
+          events.push({
+            id: req._id,
+            title: `${req.organizationName || 'Unknown'} - ${req.urgencyLevel || 'LOW'} urgency`,
+            start: neededDate,
+            end: neededDate,
+            allDay: true,
+            backgroundColor: color,
+            borderColor: color,
+            textColor: textColor,
+            extendedProps: {
+              requestId: req.requestId,
+              status: req.status,
+              urgencyLevel: req.urgencyLevel,
+              peopleCount: req.peopleCount,
+              contactPhone: req.contactPhone,
+              notes: req.notes,
+              requestedItems: req.requestedItems
+            }
+          })
+        }
+      }
+    })
+    return events
+  }, [requests])
+
+  const handleDateClick = (info) => {
+    // Find requests with neededBefore date matching the clicked date
+    const clickedDate = info.dateStr
+    const requestsOnDate = requests.filter((req) => {
+      if (!req.neededBefore) return false
+      const neededDate = new Date(req.neededBefore).toISOString().split('T')[0]
+      return neededDate === clickedDate
+    })
+    
+    if (requestsOnDate.length > 0) {
+      const message = requestsOnDate.map(r => 
+        `${r.organizationName} - ${r.urgencyLevel} urgency (${r.status})`
+      ).join('\n')
+      showToast(`${requestsOnDate.length} request(s) due on this date:\n${message}`, 'info')
+    }
+  }
+
+  const handleEventClick = (info) => {
+    const eventData = info.event.extendedProps
+    const request = requests.find(r => r._id === info.event.id)
+    if (request) {
+      setSelectedReq(request)
+    }
+  }
+
   const handleApprove = async (id) => {
-    if (!window.confirm('Approve this request?')) return
     setActionLoading(id)
 
     try {
@@ -67,16 +165,16 @@ const RequestsTab = () => {
       const data = await parseJsonSafe(res)
 
       if (!res.ok) {
-        alert(data.message || 'Failed to approve request')
+        showToast(data.message || 'Failed to approve request', 'error')
         return
       }
 
-      alert(data.message || 'Request approved')
+      showToast(data.message || 'Request approved successfully', 'success')
       fetchRequests()
       setSelectedReq(null)
     } catch (err) {
       console.error(err)
-      alert('Network error')
+      showToast('Network error', 'error')
     } finally {
       setActionLoading('')
     }
@@ -94,18 +192,18 @@ const RequestsTab = () => {
       const data = await parseJsonSafe(res)
 
       if (!res.ok) {
-        alert(data.message || 'Failed to decline request')
+        showToast(data.message || 'Failed to decline request', 'error')
         return
       }
 
-      alert(data.message || 'Request declined')
+      showToast(data.message || 'Request declined', 'success')
       fetchRequests()
       setSelectedReq(null)
       setShowDeclineModal(null)
       setDeclineReason('')
     } catch (err) {
       console.error(err)
-      alert('Network error')
+      showToast('Network error', 'error')
     } finally {
       setActionLoading('')
     }
@@ -113,6 +211,36 @@ const RequestsTab = () => {
 
   return (
     <div className="mx-auto max-w-7xl space-y-8">
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className="fixed top-5 right-5 z-50 animate-in slide-in-from-top-2 fade-in duration-300">
+          <div className={`rounded-2xl px-6 py-4 shadow-lg whitespace-pre-line ${
+            toast.type === 'success' 
+              ? 'bg-teal-800 text-white' 
+              : toast.type === 'error'
+              ? 'bg-rose-600 text-white'
+              : 'bg-blue-600 text-white'
+          }`}>
+            <div className="flex items-center gap-3">
+              {toast.type === 'success' ? (
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              ) : toast.type === 'error' ? (
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              )}
+              <span className="font-semibold">{toast.message}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       <section className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h2 className="text-4xl font-black tracking-tight text-slate-900">Resource Requests</h2>
@@ -123,50 +251,85 @@ const RequestsTab = () => {
 
         <div className="flex flex-wrap gap-3">
           <button
-            onClick={() => setFilter('')}
-            className={`rounded-full px-5 py-3 font-semibold ${filter === '' ? 'bg-white text-teal-800 shadow-sm' : 'bg-slate-100 text-slate-600'}`}
+            onClick={() => setShowCalendar(!showCalendar)}
+            className="rounded-full bg-teal-800 px-5 py-3 font-semibold text-white"
           >
-            All Requests
-          </button>
-          <button
-            onClick={() => setFilter('PENDING')}
-            className={`rounded-full px-5 py-3 font-semibold ${filter === 'PENDING' ? 'bg-white text-teal-800 shadow-sm' : 'bg-slate-100 text-slate-600'}`}
-          >
-            Pending
-          </button>
-          <button
-            onClick={() => setFilter('APPROVED')}
-            className={`rounded-full px-5 py-3 font-semibold ${filter === 'APPROVED' ? 'bg-white text-teal-800 shadow-sm' : 'bg-slate-100 text-slate-600'}`}
-          >
-            Approved
-          </button>
-          <button
-            onClick={() => setFilter('DECLINED')}
-            className={`rounded-full px-5 py-3 font-semibold ${filter === 'DECLINED' ? 'bg-white text-teal-800 shadow-sm' : 'bg-slate-100 text-slate-600'}`}
-          >
-            Declined
+            {showCalendar ? 'Hide Calendar' : 'Show Calendar'}
           </button>
         </div>
       </section>
 
+      {showCalendar && (
+        <section className="rounded-[34px] bg-white p-6 shadow-sm">
+          <h3 className="mb-4 text-2xl font-black text-slate-900">Request Timeline Calendar</h3>
+          <p className="mb-6 text-sm text-slate-600">
+            <span className="inline-block w-3 h-3 rounded-full bg-red-500 mr-2"></span> High Urgency
+            <span className="inline-block w-3 h-3 rounded-full bg-amber-500 ml-4 mr-2"></span> Medium Urgency
+            <span className="inline-block w-3 h-3 rounded-full bg-emerald-500 ml-4 mr-2"></span> Low Urgency
+            <span className="inline-block w-3 h-3 rounded-full bg-emerald-600 ml-4 mr-2"></span> Approved
+            <span className="inline-block w-3 h-3 rounded-full bg-red-600 ml-4 mr-2"></span> Declined
+          </p>
+          <FullCalendar
+            plugins={[dayGridPlugin, interactionPlugin]}
+            initialView="dayGridMonth"
+            events={calendarEvents}
+            dateClick={handleDateClick}
+            eventClick={handleEventClick}
+            height="auto"
+            headerToolbar={{
+              left: 'prev,next today',
+              center: 'title',
+              right: 'dayGridMonth,dayGridWeek'
+            }}
+            buttonText={{
+              today: 'Today',
+              month: 'Month',
+              week: 'Week'
+            }}
+            eventDisplay="block"
+            eventTimeFormat={{
+              hour: '2-digit',
+              minute: '2-digit',
+              meridiem: false
+            }}
+          />
+        </section>
+      )}
+
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.4fr_340px]">
         <div className="rounded-[34px] bg-[#e8eef1] p-6">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-            <div className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-700">
-              Pending ({pendingCount})
-            </div>
-            <div className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-700">
-              Approved ({approvedCount})
-            </div>
-            <div className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-700">
-              Declined ({declinedCount})
-            </div>
             <button
-              onClick={fetchRequests}
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-teal-800 px-5 py-3 text-sm font-semibold text-white"
+              onClick={() => setFilter('')}
+              className={`rounded-full px-5 py-3 text-sm font-semibold ${
+                filter === '' ? 'bg-teal-800 text-white' : 'bg-white text-slate-700'
+              }`}
             >
-              {Icons.refresh}
-              Refresh
+              All Requests ({requests.length})
+            </button>
+            <button
+              onClick={() => setFilter('PENDING')}
+              className={`rounded-full px-5 py-3 text-sm font-semibold ${
+                filter === 'PENDING' ? 'bg-teal-800 text-white' : 'bg-white text-slate-700'
+              }`}
+            >
+              Pending ({pendingCount})
+            </button>
+            <button
+              onClick={() => setFilter('APPROVED')}
+              className={`rounded-full px-5 py-3 text-sm font-semibold ${
+                filter === 'APPROVED' ? 'bg-teal-800 text-white' : 'bg-white text-slate-700'
+              }`}
+            >
+              Approved ({approvedCount})
+            </button>
+            <button
+              onClick={() => setFilter('DECLINED')}
+              className={`rounded-full px-5 py-3 text-sm font-semibold ${
+                filter === 'DECLINED' ? 'bg-teal-800 text-white' : 'bg-white text-slate-700'
+              }`}
+            >
+              Declined ({declinedCount})
             </button>
           </div>
         </div>
@@ -232,7 +395,13 @@ const RequestsTab = () => {
                 </div>
                 <div className="flex justify-between gap-3">
                   <span className="text-slate-500">Needed Before</span>
-                  <span className="font-semibold text-slate-900">{fmt(req.neededBefore)}</span>
+                  <span className="font-semibold text-slate-900">
+                    {req.neededBefore ? new Date(req.neededBefore).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    }) : '—'}
+                  </span>
                 </div>
                 <div className="flex justify-between gap-3">
                   <span className="text-slate-500">Status</span>
@@ -267,7 +436,7 @@ const RequestsTab = () => {
 
               <button
                 onClick={() => setSelectedReq(req)}
-                className="mt-6 w-full rounded-full bg-slate-200 px-5 py-3 font-semibold text-slate-700"
+                className="mt-6 w-full rounded-full bg-slate-200 px-5 py-3 font-semibold text-slate-700 hover:bg-slate-300 transition-colors"
               >
                 View Full Details
               </button>
@@ -277,7 +446,7 @@ const RequestsTab = () => {
                   <button
                     disabled={actionLoading === req._id}
                     onClick={() => handleApprove(req._id)}
-                    className="flex-1 rounded-full bg-emerald-300 px-4 py-3 font-semibold text-teal-900 disabled:opacity-60"
+                    className="flex-1 rounded-full bg-emerald-300 px-4 py-3 font-semibold text-teal-900 disabled:opacity-60 hover:bg-emerald-400 transition-colors"
                   >
                     Approve
                   </button>
@@ -287,7 +456,7 @@ const RequestsTab = () => {
                       setShowDeclineModal(req._id)
                       setDeclineReason('')
                     }}
-                    className="flex-1 rounded-full bg-rose-100 px-4 py-3 font-semibold text-rose-700 disabled:opacity-60"
+                    className="flex-1 rounded-full bg-rose-100 px-4 py-3 font-semibold text-rose-700 disabled:opacity-60 hover:bg-rose-200 transition-colors"
                   >
                     Decline
                   </button>
@@ -310,7 +479,7 @@ const RequestsTab = () => {
               <Detail label="Contact Phone" value={selectedReq.contactPhone} />
               <Detail label="People Count" value={selectedReq.peopleCount} />
               <Detail label="Urgency Level" value={selectedReq.urgencyLevel} />
-              <Detail label="Needed Before" value={fmt(selectedReq.neededBefore)} />
+              <Detail label="Needed Before" value={selectedReq.neededBefore ? new Date(selectedReq.neededBefore).toLocaleDateString() : '—'} />
               <Detail label="Created At" value={fmt(selectedReq.createdAt)} />
               <Detail label="Status" value={selectedReq.status} />
             </div>

@@ -10,11 +10,14 @@ import {
   ClipboardCheck,
   Clock4,
   History,
+  PieChart,
+  BarChart3,
   LayoutDashboard,
   LogOut,
   MapPin,
   Menu,
   Package,
+  Search,
   Truck,
   UserRound,
   Van,
@@ -23,6 +26,7 @@ import {
 import { Logo } from '../assets/assets'
 
 const VEHICLES = ['Van', 'Truck', 'Bike']
+const AVAILABLE_PICKUP_STATUSES = new Set(['ASSIGNED', 'CREATED', 'PENDING'])
 const ACTIVE_STATUSES = new Set(['ASSIGNED', 'PICKED_UP', 'IN_TRANSIT'])
 const HISTORY_STATUSES = new Set(['DELIVERED', 'CANCELLED'])
 
@@ -72,15 +76,28 @@ function normalizePickup(item) {
 
 function normalizeDelivery(item) {
   const status = String(item?.status || item?.Status || '').toUpperCase()
+  const deliverType = String(item?.deliverType || '').toLowerCase()
+  const isDrop = deliverType === 'drop'
+
   return {
     id: item?._id || item?.id,
     donationRef: item?.donationId || item?.donationFormId || item?._id,
     status,
-    donorName: item?.pickup?.contactName || item?.donorName || 'Assigned Delivery',
-    address: item?.pickup?.address || item?.address || 'Address not provided',
-    contact: item?.pickup?.contactPhone || item?.contact || 'N/A',
+    deliverType,
+    donorName:
+      (isDrop ? item?.drop?.contactName : item?.pickup?.contactName) ||
+      item?.donorName ||
+      'Assigned Delivery',
+    address:
+      (isDrop ? item?.drop?.address : item?.pickup?.address) ||
+      item?.address ||
+      'Address not provided',
+    contact:
+      (isDrop ? item?.drop?.contactPhone : item?.pickup?.contactPhone) ||
+      item?.contact ||
+      'N/A',
     itemCount: item?.items?.length || 0,
-    itemPreview: item?.items?.[0]?.name || 'Donation items',
+    itemPreview: item?.items?.[0]?.name || (isDrop ? 'NGO request' : 'Donation items'),
     scheduledAt: item?.scheduledAt || item?.updatedAt,
     driverId: typeof item?.driverId === 'object' ? item?.driverId?._id : item?.driverId,
     raw: item,
@@ -98,6 +115,8 @@ const DriverDashboard = () => {
   const [selectedPickup, setSelectedPickup] = useState(null)
   const [selectedVehicle, setSelectedVehicle] = useState('Van')
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [resolvedDriverId, setResolvedDriverId] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
 
   const user = useMemo(() => resolveUser(), [])
   const navigate = useNavigate()
@@ -106,31 +125,43 @@ const DriverDashboard = () => {
   const driverName = user?.name || user?.username || 'Driver'
   const profileVehicle = user?.vehicleType || 'Truck'
 
-  const fetchPickups = useCallback(async () => {
+  const fetchDriverProfile = useCallback(async () => {
+    if (!driverId) return
     try {
-      const res = await axiosInstance.get('/donationForms')
+      const res = await axiosInstance.get('/api/drivers')
       const list = extractList(res.data)
-      const normalized = list
-        .map(normalizePickup)
-        .filter((item) => ['APPROVED', 'PENDING'].includes(item.status))
-      setPickups(normalized)
+      const matched = list.find((item) => item?.userId === driverId || item?._id === driverId)
+      setResolvedDriverId(matched?._id || '')
     } catch {
-      setPickups([])
+      setResolvedDriverId('')
     }
-  }, [])
+  }, [driverId])
 
   const fetchDeliveries = useCallback(async () => {
     try {
+      const driverFilter = resolvedDriverId || driverId
       const res = await axiosInstance.get('/api/deliveries', {
-        params: driverId ? { driverId, limit: 50 } : { limit: 50 },
+        params: driverFilter ? { driverId: driverFilter, limit: 50 } : { limit: 50 },
       })
 
       const list = extractList(res.data).map(normalizeDelivery)
-      const scoped = driverId ? list.filter((item) => !item.driverId || item.driverId === driverId) : list
+      const pickupList = list.filter(
+        (item) =>
+          ['pickup', 'drop'].includes(item.deliverType) &&
+          AVAILABLE_PICKUP_STATUSES.has(item.status)
+      )
 
-      setDeliveries(scoped.filter((item) => ACTIVE_STATUSES.has(item.status)))
-      setDeliveryHistory(scoped.filter((item) => HISTORY_STATUSES.has(item.status)))
+      setPickups(pickupList)
+      setDeliveries(
+        list.filter(
+          (item) =>
+            ACTIVE_STATUSES.has(item.status) &&
+            !AVAILABLE_PICKUP_STATUSES.has(item.status)
+        )
+      )
+      setDeliveryHistory(list.filter((item) => HISTORY_STATUSES.has(item.status)))
     } catch {
+      setPickups([])
       setDeliveries([])
       setDeliveryHistory([])
     }
@@ -139,11 +170,12 @@ const DriverDashboard = () => {
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      await Promise.all([fetchPickups(), fetchDeliveries()])
+      await fetchDriverProfile()
+      await fetchDeliveries()
     } finally {
       setLoading(false)
     }
-  }, [fetchDeliveries, fetchPickups])
+  }, [fetchDeliveries, fetchDriverProfile])
 
   useEffect(() => {
     loadData()
@@ -161,59 +193,25 @@ const DriverDashboard = () => {
     setSelectedPickup(null)
   }
 
-  const handleAcceptPickup = async () => {
+ const handleAcceptPickup = async () => {
     if (!selectedPickup) return
 
     setIsActionLoading(true)
     try {
-      // Step 1: Build items for the Delivery schema
-      const rawItems = selectedPickup.raw?.items || []
-      const deliveryItems = rawItems.map((item) => ({
-        name: item?.productId || item?.name || 'Donation Item',
-        qty: Number(item?.quantity || item?.qty || 1),
-        unit: item?.unit || 'pack',
-      }))
-      if (deliveryItems.length === 0) {
-        deliveryItems.push({ name: 'Donation items', qty: 1, unit: 'pack' })
-      }
+      // Step 1: Mark the assigned pickup as started
+      await axiosInstance.put(`/api/deliveries/${selectedPickup.id}/status`, {
+        status: 'PICKED_UP',
+        message: `Pickup started by ${driverName} with ${selectedVehicle}`,
+      })
 
-      // Step 2: Create a Delivery record via the delivery API
-      const payload = {
-        deliverType: 'pickup',
-        donationId: selectedPickup.donationRef || selectedPickup.id,
-        pickup: {
-          address: selectedPickup.address || 'Pickup address (to be confirmed)',
-          contactName: selectedPickup.donorName || '',
-          contactPhone: selectedPickup.contact || '',
-        },
-        items: deliveryItems,
-        notes: `Accepted by ${driverName} with ${selectedVehicle}`,
-      }
-
-      const createRes = await axiosInstance.post('/api/deliveries', payload)
-      const delivery = createRes.data
-      const deliveryId = delivery?._id || delivery?.id
-
-      // Step 3: Assign driver to the delivery (if we have a driverId)
-      if (deliveryId && driverId) {
-        await axiosInstance.put(`/api/deliveries/${deliveryId}/assign`, {
-          driverId,
-        })
-      }
-
-      // Step 4: Update driver's vehicle type if it changed
-      if (driverId) {
+      // Step 2: Update driver's vehicle type if it changed
+      if (resolvedDriverId || driverId) {
         await axiosInstance
-          .put(`/api/drivers/${driverId}`, { vehicleType: selectedVehicle })
+          .put(`/api/drivers/${resolvedDriverId || driverId}`, { vehicleType: selectedVehicle })
           .catch(() => {}) // Non-critical
       }
 
-      // Step 5: Update donation status to Received
-      await axiosInstance
-        .put(`/donationForms/${selectedPickup.id}`, { Status: 'Received' })
-        .catch(() => {}) // Non-critical
-
-      toast.success(`Pickup accepted with ${selectedVehicle}`)
+      toast.success(`Pickup started with ${selectedVehicle}`)
       closeModal()
       setActiveView('tasks')
       await loadData() // Full refresh
@@ -255,10 +253,62 @@ const DriverDashboard = () => {
   }
 
   const overviewStats = [
-    { label: 'Open Pickups', value: pickups.length },
-    { label: 'Active Tasks', value: deliveries.length },
-    { label: 'Completed Trips', value: deliveryHistory.length },
+    { label: 'Open Pickups', value: pickups.length, icon: Package },
+    { label: 'Active Tasks', value: deliveries.length, icon: ClipboardCheck },
+    { label: 'Completed Trips', value: deliveryHistory.length, icon: CheckCircle2 },
   ]
+
+  const normalizedSearch = searchTerm.trim().toLowerCase()
+  const matchesSearch = (item) => {
+    if (!normalizedSearch) return true
+    const haystack = [
+      item?.donorName,
+      item?.address,
+      item?.contact,
+      item?.itemPreview,
+      item?.donationRef,
+      item?.status,
+      item?.deliverType,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+
+    return haystack.includes(normalizedSearch)
+  }
+
+  const filteredPickups = useMemo(
+    () => pickups.filter(matchesSearch),
+    [pickups, normalizedSearch]
+  )
+  const filteredDeliveries = useMemo(
+    () => deliveries.filter(matchesSearch),
+    [deliveries, normalizedSearch]
+  )
+  const filteredHistory = useMemo(
+    () => deliveryHistory.filter(matchesSearch),
+    [deliveryHistory, normalizedSearch]
+  )
+
+  const chartTotals = useMemo(() => {
+    const allItems = [...pickups, ...deliveries, ...deliveryHistory]
+    const pickupCount = allItems.filter((item) => item.deliverType === 'pickup').length
+    const ngoCount = allItems.filter((item) => item.deliverType === 'drop').length
+    const total = pickupCount + ngoCount
+
+    return {
+      total,
+      pickupCount,
+      ngoCount,
+      completed: deliveryHistory.length,
+      active: deliveries.length,
+      open: pickups.length,
+    }
+  }, [deliveries.length, deliveryHistory.length, pickups.length, deliveries, deliveryHistory, pickups])
+
+  const completionRate = chartTotals.total
+    ? Math.round((chartTotals.completed / chartTotals.total) * 100)
+    : 0
 
   const sidebarLinks = [
     { id: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard },
@@ -287,15 +337,92 @@ const DriverDashboard = () => {
             <p className='text-sm font-medium text-slate-500'>{stat.label}</p>
             <div className='mt-3 flex items-center justify-between'>
               <p className='text-3xl font-bold text-slate-900'>{stat.value}</p>
-              <span className='rounded-full border border-teal-300 bg-teal-300/30 px-3 py-1 text-xs font-semibold text-teal-900'>Live</span>
+              <span className='inline-flex items-center gap-2 rounded-full border border-teal-200 bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-900'>
+                <stat.icon size={14} />
+                Live
+              </span>
             </div>
           </article>
         ))}
       </div>
 
-      <div className='rounded-3xl border border-slate-100 bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-xl'>
-        <h2 className='text-lg font-semibold text-slate-900'>Today Snapshot</h2>
-        <p className='mt-2 text-sm text-slate-600'>Track pickups, complete route milestones, and keep delivery turnaround smooth.</p>
+      <div className='grid gap-4 lg:grid-cols-[1.2fr_1fr]'>
+        <div className='rounded-3xl border border-slate-100 bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-xl'>
+          <div className='flex items-center gap-3'>
+            <div className='flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-50 text-teal-700'>
+              <BarChart3 size={18} />
+            </div>
+            <div>
+              <h2 className='text-lg font-semibold text-slate-900'>Today Snapshot</h2>
+              <p className='text-sm text-slate-600'>Track pickups, complete route milestones, and keep delivery turnaround smooth.</p>
+            </div>
+          </div>
+
+          <div className='mt-6 space-y-4'>
+            {[
+              { label: 'Open Pickups', value: chartTotals.open, max: Math.max(chartTotals.total, 1), color: 'bg-amber-400' },
+              { label: 'Active Tasks', value: chartTotals.active, max: Math.max(chartTotals.total, 1), color: 'bg-teal-500' },
+              { label: 'Completed Trips', value: chartTotals.completed, max: Math.max(chartTotals.total, 1), color: 'bg-emerald-500' },
+            ].map((item) => (
+              <div key={item.label} className='space-y-2'>
+                <div className='flex items-center justify-between text-sm text-slate-600'>
+                  <span className='font-medium text-slate-800'>{item.label}</span>
+                  <span>{item.value}</span>
+                </div>
+                <div className='h-2 w-full rounded-full bg-slate-100'>
+                  <div
+                    className={`h-full rounded-full ${item.color}`}
+                    style={{ width: `${Math.min(100, Math.round((item.value / item.max) * 100))}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className='rounded-3xl border border-slate-100 bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-xl'>
+          <div className='flex items-center gap-3'>
+            <div className='flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-50 text-sky-600'>
+              <PieChart size={18} />
+            </div>
+            <div>
+              <h2 className='text-lg font-semibold text-slate-900'>Completion Mix</h2>
+              <p className='text-sm text-slate-600'>Pickup vs NGO deliveries across your current workload.</p>
+            </div>
+          </div>
+
+          <div className='mt-6 flex flex-wrap items-center justify-between gap-6'>
+            <div
+              className='relative flex h-36 w-36 items-center justify-center rounded-full'
+              style={{
+                background: `conic-gradient(#14b8a6 0 ${chartTotals.total ? Math.round((chartTotals.pickupCount / chartTotals.total) * 360) : 0}deg, #38bdf8 0 360deg)`,
+              }}
+            >
+              <div className='flex h-24 w-24 items-center justify-center rounded-full bg-white text-center'>
+                <div>
+                  <p className='text-2xl font-bold text-slate-900'>{completionRate}%</p>
+                  <p className='text-xs text-slate-500'>Completed</p>
+                </div>
+              </div>
+            </div>
+
+            <div className='space-y-3 text-sm text-slate-600'>
+              <div className='flex items-center gap-2'>
+                <span className='h-2.5 w-2.5 rounded-full bg-teal-500' />
+                <span className='font-medium text-slate-800'>Donation Pickups</span>
+                <span className='ml-auto font-semibold text-slate-900'>{chartTotals.pickupCount}</span>
+              </div>
+              <div className='flex items-center gap-2'>
+                <span className='h-2.5 w-2.5 rounded-full bg-sky-400' />
+                <span className='font-medium text-slate-800'>NGO Deliveries</span>
+                <span className='ml-auto font-semibold text-slate-900'>{chartTotals.ngoCount}</span>
+              </div>
+              <div className='rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-600'>
+                Total runs: <span className='font-semibold text-slate-900'>{chartTotals.total || 0}</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   )
@@ -321,6 +448,24 @@ const DriverDashboard = () => {
     </section>
   )
 
+  const renderHistorySection = (title, subtitle, items) => (
+    <section className='space-y-3'>
+      <div className='flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-slate-100 bg-white px-5 py-4 shadow-sm'>
+        <div>
+          <h2 className='text-lg font-semibold text-slate-900'>{title}</h2>
+          <p className='text-sm text-slate-500'>{subtitle}</p>
+        </div>
+        <span className='rounded-full border border-teal-200 bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-800'>
+          {items.length} record{items.length === 1 ? '' : 's'}
+        </span>
+      </div>
+
+      {items.length
+        ? renderCards(items, 'View Details', () => toast('History item selected'))
+        : <EmptyState title='No history records in this section' />}
+    </section>
+  )
+
   const renderMainContent = () => {
     if (loading) {
       return (
@@ -335,20 +480,38 @@ const DriverDashboard = () => {
     if (activeView === 'overview') return renderOverview()
 
     if (activeView === 'pickups') {
-      return pickups.length
-        ? renderCards(pickups, 'Accept Pickup', openAcceptModal)
+      return filteredPickups.length
+        ? renderCards(filteredPickups, 'Accept Pickup', openAcceptModal)
         : <EmptyState title='No available pickups currently' />
     }
 
     if (activeView === 'tasks') {
-      return deliveries.length
-        ? renderCards(deliveries, 'Complete Task', handleCompleteDelivery)
+      return filteredDeliveries.length
+        ? renderCards(filteredDeliveries, 'Complete Task', handleCompleteDelivery)
         : <EmptyState title='No active tasks assigned' />
     }
 
-    return deliveryHistory.length
-      ? renderCards(deliveryHistory, 'View Details', () => toast('History item selected'))
-      : <EmptyState title='No delivery history yet' />
+    const pickupHistory = filteredHistory.filter((item) => item.deliverType === 'pickup')
+    const ngoHistory = filteredHistory.filter((item) => item.deliverType === 'drop')
+
+    if (!pickupHistory.length && !ngoHistory.length) {
+      return <EmptyState title='No delivery history yet' />
+    }
+
+    return (
+      <div className='space-y-6'>
+        {renderHistorySection(
+          'Donation Pickup History',
+          'Completed pickups assigned to you by the manager.',
+          pickupHistory
+        )}
+        {renderHistorySection(
+          'NGO Request Delivery History',
+          'Completed NGO deliveries assigned to you by the manager.',
+          ngoHistory
+        )}
+      </div>
+    )
   }
 
   return (
@@ -426,6 +589,19 @@ const DriverDashboard = () => {
                 <div>
                   <h1 className='text-2xl font-bold text-slate-900'>Welcome back, {driverName}</h1>
                   <p className='text-sm text-slate-500'>Manage your daily pickups and deliveries efficiently.</p>
+                </div>
+              </div>
+
+              <div className='flex flex-1 items-center justify-end gap-3'>
+                <div className='relative hidden min-w-[220px] max-w-[320px] flex-1 sm:block'>
+                  <Search className='pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400' />
+                  <input
+                    type='search'
+                    placeholder='Search deliveries...'
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                    className='w-full rounded-2xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm text-slate-700 outline-none transition focus:border-teal-400 focus:bg-white'
+                  />
                 </div>
               </div>
 
