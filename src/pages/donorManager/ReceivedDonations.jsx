@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { BASE_URL, getToken, getUser, getDonationForms, getMyDonationHistory } from "../../api";
+import { BASE_URL, getToken, getUser, getDonationForms, getMyDonationHistory, getUserById } from "../../api";
 
 export default function ReceivedDonations() {
   const [items, setItems] = useState([]);
@@ -9,21 +9,10 @@ export default function ReceivedDonations() {
 
   const loadDonor = useCallback(
     async (id) => {
-  if (!id || donorsMap[id]) return;
+      if (!id || donorsMap[id]) return;
 
       try {
-        const token = getToken();
-
-  const res = await fetch(`http://localhost:3000/api/users/${id}`, {
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        });
-
-        if (!res.ok) return;
-
-        const data = await res.json().catch(() => ({}));
+        const data = await getUserById(id);
         const user = data.data || data.user || data || {};
         const role = (user.role || "").toLowerCase();
 
