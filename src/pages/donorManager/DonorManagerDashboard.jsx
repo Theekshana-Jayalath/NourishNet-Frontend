@@ -31,7 +31,7 @@ import ReceivedDonations from "./ReceivedDonations";
 import DonorList from "./DonorList";
 import DonationReports from "./DonationReports";
 import DonorProfileView from "./DonorProfileView";
-import { BASE_URL, getToken, getDonationForms } from "../../api";
+import { BASE_URL, getToken, getDonationForms, getUsers } from "../../api";
 
 // Small error boundary to catch render-time exceptions and show a helpful UI
 class ErrorBoundary extends React.Component {
@@ -104,13 +104,7 @@ export default function DonorManagerDashboard() {
         setError("");
         const token = getToken();
         try {
-          const usersRes = await fetch(`http://localhost:3000/api/users?role=donor`, {
-            headers: {
-              "Content-Type": "application/json",
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-          });
-          const usersData = await usersRes.json().catch(() => []);
+          const usersData = await getUsers({ role: "donor" });
           if (mounted) setDonors(Array.isArray(usersData) ? usersData : usersData.data || []);
 
           const donationsData = await getDonationForms().catch(() => ({ data: [] }));

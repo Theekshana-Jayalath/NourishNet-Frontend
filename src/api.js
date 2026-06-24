@@ -1,4 +1,6 @@
-export const BASE_URL = "http://localhost:3000/api";  // Keep this as is
+import axiosInstance from './api/axiosInstance';
+
+export const BASE_URL = axiosInstance.defaults.baseURL;
 
 export function getToken() { 
   return localStorage.getItem("token") || ""; 
@@ -13,24 +15,39 @@ export function getUser() {
 }
 
 async function request(endpoint, options = {}) { 
-  const token = getToken();
-  
-  const res = await fetch(`${BASE_URL}${endpoint}`, { 
-    ...options, 
-    headers: { 
-      "Content-Type": "application/json", 
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers || {}),
-    }, 
-  });
-  
-  const data = await res.json().catch(() => ({}));
-  
-  if (!res.ok) { 
-    throw new Error(data.message || "Request failed"); 
+  const { method = 'GET', body, headers, ...rest } = options;
+  try {
+    const response = await axiosInstance({
+      url: endpoint,
+      method: method.toUpperCase(),
+      data: body ? (typeof body === 'string' ? JSON.parse(body) : body) : undefined,
+      headers,
+      ...rest
+    });
+    return response.data;
+  } catch (error) {
+    const message = error.response?.data?.message || error.message || "Request failed";
+    throw new Error(message);
   }
-  
-  return data; 
+}
+
+export async function login(username, password) {
+  return request('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ username, password })
+  });
+}
+
+export async function getUserById(id) {
+  return request(`/users/${id}`);
+}
+
+export async function getUsers(params = {}) {
+  const query = new URLSearchParams();
+  if (params.role) query.append("role", params.role);
+  if (params.limit) query.append("limit", params.limit);
+  const qs = query.toString() ? `?${query.toString()}` : "";
+  return request(`/users${qs}`);
 }
 
 export async function createRequest(payload) { 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { welcome } from '../assets/assets'
+import { login } from '../api'
 
 // Minimal JWT decode (no verification) to read role from token payload
 const decodeJwt = (token) => {
@@ -28,23 +29,7 @@ const Login = () => {
     setLoading(true)
 
     try {
-      const base = import.meta.env.VITE_API_URL
-      const url = base ? `${base}/api/auth/login` : '/api/auth/login'
-      const payload = { username, password }
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        setError(data.message || 'Invalid credentials')
-        setLoading(false)
-        return
-      }
+      const data = await login(username, password)
 
       const token = data.token
       if (!token) {
@@ -95,7 +80,7 @@ const Login = () => {
       }
 
     } catch (err) {
-      setError('Network error')
+      setError(err.message || 'Network error')
     } finally {
       setLoading(false)
     }

@@ -102,11 +102,11 @@ export default function DonorList() {
     try {
       const token = useCustomToken && customToken ? customToken : getToken();
       // mirror fetch logic from mount: try server-side role filter, fallback to ngo-manager
-  let url = `http://localhost:3000/api/users?role=donor`;
+      let url = `${BASE_URL.replace(/\/$/, '')}/users?role=donor`;
       setLastUrl(url);
       let res = await fetch(url, { headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
       if (res.status === 401 || res.status === 403) {
-  url = `${BASE_URL}/api/ngo-manager/users`;
+        url = `${BASE_URL.replace(/\/$/, '')}/ngo-manager/users`;
         setLastUrl(url);
         res = await fetch(url, { headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
       }

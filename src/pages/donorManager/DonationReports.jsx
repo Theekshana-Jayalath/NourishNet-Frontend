@@ -17,7 +17,7 @@ import {
   Filter,
   RefreshCw,
 } from "lucide-react";
-import { BASE_URL, getToken, getUser, getDonationForms } from "../../api";
+import { BASE_URL, getToken, getUser, getDonationForms, getUserById } from "../../api";
 
 function getDonorIdFromForm(f) {
   if (!f) return null;
@@ -66,12 +66,7 @@ export default function DonationReports() {
   const loadDonor = useCallback(async (id) => {
     if (!id || donorsMap[id]) return;
     try {
-      const token = getToken();
-    const res = await fetch(`http://localhost:3000/api/users/${id}`, {
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      });
-      if (!res.ok) { setDonorsMap(m => ({ ...m, [id]: { name: "Unknown", username: "unknown" } })); return; }
-      const data = await res.json().catch(() => ({}));
+      const data = await getUserById(id);
       const user = data.data || data.user || data || {};
       const role = (user.role || "").toLowerCase();
       if (role !== "donor") {

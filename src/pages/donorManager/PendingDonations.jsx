@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { BASE_URL, getToken, getUser, getDonationForms, getMyPendingDonations } from "../../api";
+import { BASE_URL, getToken, getUser, getDonationForms, getMyPendingDonations, getUserById } from "../../api";
 
 export default function PendingDonations() {
   const [items, setItems] = useState([]);
@@ -9,25 +9,10 @@ export default function PendingDonations() {
   const [donorsMap, setDonorsMap] = useState({});
 
   const loadDonor = useCallback(async (id) => {
-  if (!id) return;
+    if (!id) return;
 
     try {
-      const token = getToken();
-
-  const res = await fetch(`http://localhost:3000/api/users/${id}`, {
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
-
-      if (!res.ok) {
-        console.warn('Failed to fetch user', id, res.status);
-        setDonorsMap((m) => ({ ...m, [id]: { name: 'Unknown (unreachable)', username: 'unknown', _networkError: true } }));
-        return;
-      }
-
-      const data = await res.json().catch(() => ({}));
+      const data = await getUserById(id);
       const user = data.data || data.user || data || {};
       const role = (user.role || "").toLowerCase();
 
@@ -42,7 +27,10 @@ export default function PendingDonations() {
       }
 
       setDonorsMap((m) => ({ ...m, [id]: user }));
-    } catch (e) {}
+    } catch (e) {
+      console.warn('Failed to fetch user', id);
+      setDonorsMap((m) => ({ ...m, [id]: { name: 'Unknown (unreachable)', username: 'unknown', _networkError: true } }));
+    }
   }, []);
 
   const getDonorIdFromForm = (f) => {
