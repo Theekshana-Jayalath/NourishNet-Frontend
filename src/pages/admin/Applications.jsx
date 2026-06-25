@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { BASE_URL } from '../../api'
 
 const Applications = () => {
   const [items, setItems] = useState([])
@@ -21,7 +22,7 @@ const Applications = () => {
     try {
       const token = localStorage.getItem('token')
       const headers = token ? { Authorization: `Bearer ${token}` } : {}
-      const res = await fetch('/api/applications', { headers })
+      const res = await fetch(`${BASE_URL}/applications`, { headers })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
         setError(body.message || 'Failed to load applications')
@@ -43,7 +44,7 @@ const Applications = () => {
     try {
       const token = localStorage.getItem('token')
       const headers = token ? { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } : { 'Content-Type': 'application/json' }
-      const res = await fetch(`/api/applications/${id}/approve`, { method: 'PUT', headers, body: JSON.stringify({ id }) })
+      const res = await fetch(`${BASE_URL}/applications/${id}/approve`, { method: 'PUT', headers, body: JSON.stringify({ id }) })
       const body = await res.json().catch(() => ({}))
       if (!res.ok) {
         setError(body.message || 'Failed to approve')
@@ -66,7 +67,7 @@ const Applications = () => {
     try {
       const token = localStorage.getItem('token')
       const headers = token ? { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } : { 'Content-Type': 'application/json' }
-      const res = await fetch(`/api/applications/${id}/approve`, { method: 'PUT', headers, body: JSON.stringify({ id }) })
+      const res = await fetch(`${BASE_URL}/applications/${id}/approve`, { method: 'PUT', headers, body: JSON.stringify({ id }) })
       const body = await res.json().catch(() => ({}))
       if (!res.ok) {
         setError(body.message || 'Failed to approve')
@@ -87,7 +88,7 @@ const Applications = () => {
     try {
       const token = localStorage.getItem('token')
       const headers = token ? { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } : { 'Content-Type': 'application/json' }
-      const res = await fetch(`/api/applications/delete/${id}`, { method: 'DELETE', headers })
+      const res = await fetch(`${BASE_URL}/applications/delete/${id}`, { method: 'DELETE', headers })
       const body = await res.json().catch(() => ({}))
       if (!res.ok) { setError(body.message || 'Failed to delete'); return }
       setSuccess('Application rejected and deleted')

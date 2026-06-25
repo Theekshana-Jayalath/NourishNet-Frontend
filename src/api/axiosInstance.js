@@ -11,7 +11,7 @@ const getBaseURL = () => {
 
 const axiosInstance = axios.create({
   baseURL: getBaseURL(),
-  timeout: 60000,
+  timeout: 120000,
 });
 
 axiosInstance.interceptors.request.use((config) => {

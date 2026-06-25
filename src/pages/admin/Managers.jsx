@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { BASE_URL } from '../../api'
 
 const defaultMock = [
   { id: 'm1', name: 'Alice Manager', email: 'alice@example.com', username: 'alice', managerType: 'DONOR_MANAGER' },
@@ -37,7 +38,7 @@ const Managers = () => {
     try {
       const token = localStorage.getItem('token')
       const authHeaders = token ? { Authorization: `Bearer ${token}` } : {}
-      const res = await fetch('/api/users', { headers: { ...authHeaders } })
+      const res = await fetch(`${BASE_URL}/users`, { headers: { ...authHeaders } })
       if (res.ok) {
         const data = await res.json().catch(() => null)
         const items = Array.isArray(data) ? data : (data?.data || [])
@@ -84,7 +85,7 @@ const Managers = () => {
         const id = editing.id
         const token = localStorage.getItem('token')
         const headers = token ? { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } : { 'Content-Type': 'application/json' }
-        const res = await fetch(`/api/users/${id}`, { method: 'PUT', headers, body: JSON.stringify(payload) })
+        const res = await fetch(`${BASE_URL}/users/${id}`, { method: 'PUT', headers, body: JSON.stringify(payload) })
         if (res.ok) {
           await loadManagers(); setModalOpen(false); setLoading(false); return
         }
@@ -99,7 +100,7 @@ const Managers = () => {
         }
         const token = localStorage.getItem('token')
         const headers = token ? { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } : { 'Content-Type': 'application/json' }
-        const res = await fetch('/api/users', { method: 'POST', headers, body: JSON.stringify(body) })
+        const res = await fetch(`${BASE_URL}/users`, { method: 'POST', headers, body: JSON.stringify(body) })
         if (res.ok) { 
           await loadManagers(); setModalOpen(false); setLoading(false); return 
         }
@@ -135,7 +136,7 @@ const Managers = () => {
     try {
       const token = localStorage.getItem('token')
       const headers = token ? { Authorization: `Bearer ${token}` } : {}
-      const res = await fetch(`/api/users/${id}`, { method: 'DELETE', headers })
+      const res = await fetch(`${BASE_URL}/users/${id}`, { method: 'DELETE', headers })
       if (res.ok) { 
         await loadManagers()
         setDeleteConfirm({ open: false, id: null, name: '' })

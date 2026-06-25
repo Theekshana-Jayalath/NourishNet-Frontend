@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { BASE_URL } from '../api'
 
 const Apply = () => {
   const navigate = useNavigate()
@@ -57,8 +58,7 @@ const Apply = () => {
     const payload = Object.entries(raw).reduce((acc, [k, v]) => { if (v !== undefined && v !== null && v !== '') acc[k] = v; return acc }, {})
 
     try {
-      const base = import.meta.env.VITE_API_URL
-      const url = base ? `${base}/api/applications` : '/api/applications'
+      const url = `${BASE_URL}/applications`
       const fetchOptions = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
       const res = await fetch(url, fetchOptions)
       const data = await res.json().catch(() => null)
