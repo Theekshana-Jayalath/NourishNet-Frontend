@@ -23,6 +23,7 @@ import {
   UserCog,
   TrendingDown
 } from "lucide-react";
+import { BASE_URL } from "../../api";
 
 const DashboardHome = () => {
 
@@ -44,7 +45,7 @@ const DashboardHome = () => {
   // Fetch managers directly from users endpoint as fallback
   const fetchManagersDirectly = async () => {
     try {
-      const res = await fetch("/api/users?role=manager", { headers });
+      const res = await fetch(`${BASE_URL}/users?role=manager`, { headers });
       if (!res.ok) return 0;
       const data = await res.json();
       const users = Array.isArray(data) ? data : (data?.data || data?.users || []);
@@ -64,7 +65,7 @@ const DashboardHome = () => {
   const fetchStats = async () => {
     try {
       console.log('[DashboardHome] fetching /api/admin/stats');
-      const res = await fetch("/api/admin/stats", { headers });
+      const res = await fetch(`${BASE_URL}/admin/stats`, { headers });
       
       if (!res.ok) {
         console.error('[DashboardHome] /api/admin/stats returned', res.status);
@@ -99,7 +100,7 @@ const DashboardHome = () => {
   const fetchUserGrowth = async () => {
     try {
       // Fetch all users from your backend
-      const res = await fetch("/api/users?limit=10000", { headers });
+      const res = await fetch(`${BASE_URL}/users?limit=10000`, { headers });
       if (!res.ok) {
         console.error("Failed to fetch users for growth chart:", res.status);
         setUserGrowthData([]);
@@ -205,7 +206,7 @@ const DashboardHome = () => {
   // Keep the original growth endpoint as fallback for donation trends
   const fetchGrowth = async () => {
     try {
-      const res = await fetch("/api/admin/growth", { headers });
+      const res = await fetch(`${BASE_URL}/admin/growth`, { headers });
       if (!res.ok) return;
       const data = await res.json();
       // This data is for donation trends - we'll keep it but not use for user growth
@@ -217,7 +218,7 @@ const DashboardHome = () => {
 
   const fetchExpiring = async () => {
     try {
-      const res = await fetch("/api/inventory/expiring", { headers });
+      const res = await fetch(`${BASE_URL}/inventory/expiring`, { headers });
       if (!res.ok) return;
       const data = await res.json();
       setExpiring(data);

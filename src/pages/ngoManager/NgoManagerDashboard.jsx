@@ -1,15 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { BASE_URL } from '../../api'
 import DashboardTab from './DashboardTab'
 import ApplicationsTab from './ApplicationsTab'
 import RequestsTab from './RequestsTab'
 import UsersTab from './UsersTab'
 
 /* helpers */
-export const API = () => {
-  const base = import.meta.env.VITE_API_URL
-  return base ? `${base}/api/ngo-manager` : '/api/ngo-manager'
-}
+export const API = () => `${BASE_URL}/ngo-manager`
 
 export const authHeaders = () => ({
   'Content-Type': 'application/json',

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { BASE_URL } from '../../api'
 
 const STORAGE_KEY = 'users_mock_v1'
 
@@ -38,7 +39,7 @@ const Users = () => {
       let anyOk = false
       for (const r of roles) {
         try {
-          const res = await fetch(`/api/users?role=${r}`, { headers })
+          const res = await fetch(`${BASE_URL}/users?role=${r}`, { headers })
           if (!res.ok) continue
           const json = await res.json()
           const arr = Array.isArray(json) ? json : (json.data || json.users || json.users || [])
@@ -65,7 +66,7 @@ const Users = () => {
     try {
       const token = localStorage.getItem('token')
       const headers = token ? { Authorization: `Bearer ${token}` } : {}
-      const res = await fetch(`/api/users/${id}`, { method: 'DELETE', headers })
+      const res = await fetch(`${BASE_URL}/users/${id}`, { method: 'DELETE', headers })
       if (res.ok) { 
         await loadAll()
         setDeleteConfirm({ open: false, id: null, tabKey: null, userName: '' })
@@ -87,7 +88,7 @@ const Users = () => {
       const token = localStorage.getItem('token')
       const headers = token ? { Authorization: `Bearer ${token}` } : {}
       const id = typeof uOrId === 'string' ? uOrId : (uOrId._id || uOrId.userId || uOrId.id || uOrId.username)
-      const url = `/api/users/${id}`
+      const url = `${BASE_URL}/users/${id}`
       const res = await fetch(url, { headers })
       if (!res.ok) {
         let bodyText = ''
