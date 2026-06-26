@@ -65,6 +65,10 @@ const Apply = () => {
       if (res.status === 201) {
         setSuccess('Application submitted successfully')
         setName(''); setEmail(''); setUsername(''); setPassword(''); setConfirmPassword(''); setRole(''); setContactNumber(''); setDonorType(''); setOrganizationName(''); setRegistrationNumber(''); setVehicleType(''); setLicenseNumber(''); setNotes(''); setNic(''); setAddress(''); setCity(''); setMembers([{ name: '', contact: '' }])
+        // Navigate to applications page automatically after submission as requested
+        setTimeout(() => {
+          navigate('/admin-dashboard/applications')
+        }, 1500)
         return
       }
       if (data && Array.isArray(data.errors) && data.errors.length > 0) {
